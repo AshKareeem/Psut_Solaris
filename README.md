@@ -51,6 +51,28 @@ python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --site shackleton-rim --ou
 - **Rim:** the skyline is low (near 0° or below) in most directions, so the Sun clears it often.
 - **No warning** that rays left the map. The 75°S map reaches about 455 km from the pole.
 
+## Step 2b: compare with NASA's published maps
+
+NASA's PGDA archive publishes average sunlight and Earth-visibility maps of the south pole, averaged hourly over 18.6 years. Download these two files (60 m pixels, 85–90°S) into `data/`:
+
+- <https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF> (Sun)
+- <https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF> (Earth)
+
+Then read both at your rim site:
+
+```
+python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608.TIF --lat -89.779 --lon -155.73
+python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608_EARTH.TIF --lat -89.779 --lon -155.73
+```
+
+The script uses the map's own projection, checks that it agrees with ours to within 1 m, applies the map's scale and offset, and prints the value at the site plus its 5×5 neighbourhood (±120 m).
+
+**Our rough estimates to compare against:**
+- Sun: **86%** of the year.
+- Earth: about **57%** of the time.
+
+Expect small differences: our Sun model is simplified, our terrain is coarser (240 m), and NASA averages over 18.6 years.
+
 ## The direction convention (share with CE 2)
 
 - θ is measured **from the map's +x axis, counterclockwise**, 0–360°.
