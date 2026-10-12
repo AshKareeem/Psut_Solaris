@@ -1,0 +1,5 @@
+numpy
+matplotlib
+pytest
+# week 2:
+# numba
