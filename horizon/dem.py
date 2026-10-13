@@ -1,7 +1,7 @@
 """Read LOLA south-polar DEMs (PDS3 .LBL + .IMG) and convert between lat/lon and grid positions.
 
 Map convention (PDS polar stereographic, south pole):
-  - the pole is at the centre of a square grid
+  - the pole is at the centre of a square grid (pixel (n-1)/2); a crop keeps the pole's position in its own indices
   - map x points right (toward longitude 90E), map y points up (toward longitude 0)
   - row 0 is the top of the image, so +y means a smaller row index
 """
@@ -20,18 +20,20 @@ _DTYPES = {("LSB_INTEGER", 16): "<i2", ("MSB_INTEGER", 16): ">i2", ("PC_REAL", 3
 class PolarDEM:
     height: np.ndarray  # float32, metres above the 1737.4 km sphere, indexed [row, col]
     pixel: float        # metres per pixel
-    center: float       # row and column index of the pole (the grid is square)
+    pole_row: float     # row and column index of the pole; outside the grid for a crop away from the pole
+    pole_col: float
 
     def latlon_to_rowcol(self, lat_deg, lon_deg):
         return self.xy_to_rowcol(*latlon_to_xy(lat_deg, lon_deg))
 
     def xy_to_rowcol(self, x, y):
-        return self.center - np.asarray(y) / self.pixel, self.center + np.asarray(x) / self.pixel
+        return self.pole_row - np.asarray(y) / self.pixel, self.pole_col + np.asarray(x) / self.pixel
+
+    def rowcol_to_xy(self, row, col):
+        return (np.asarray(col) - self.pole_col) * self.pixel, (self.pole_row - np.asarray(row)) * self.pixel
 
     def rowcol_to_latlon(self, row, col):
-        x = (np.asarray(col) - self.center) * self.pixel
-        y = (self.center - np.asarray(row)) * self.pixel
-        return xy_to_latlon(x, y)
+        return xy_to_latlon(*self.rowcol_to_xy(row, col))
 
 
 def latlon_to_xy(lat_deg, lon_deg):
@@ -46,8 +48,12 @@ def xy_to_latlon(x, y):
     return -90 + np.degrees(2 * np.arctan(rho / (2 * R))), np.degrees(np.arctan2(x, y))
 
 
-def read_polar_dem(label_path):
-    """Load a south-polar LOLA DEM from its PDS3 label. Fails fast on anything unexpected."""
+def read_polar_dem(label_path, bounds=None):
+    """Load a south-polar LOLA DEM from its PDS3 label. Fails fast on anything unexpected.
+
+    bounds = (x_min, x_max, y_min, y_max) in map metres loads only the pixels needed there. The image is
+    memory-mapped, so a crop of a 1.8 GB map reads just the crop.
+    """
     label_path = Path(label_path)
     lbl = _read_label(label_path)
 
@@ -75,14 +81,27 @@ def read_polar_dem(label_path):
         raise ValueError(f"OFFSET = {lbl['OFFSET']} is not the 1737.4 km reference sphere")
 
     img_path, byte_offset = _image_location(label_path, lbl)
-    dn = np.fromfile(img_path, dtype=dtype, count=n * n, offset=byte_offset)
-    if dn.size != n * n:
-        raise ValueError(f"{img_path.name} is too short: {dn.size} of {n * n} samples")
-    height = (dn.astype(np.float32) * np.float32(_number(lbl["SCALING_FACTOR"]))).reshape(n, n)
+    if img_path.stat().st_size < byte_offset + n * n * np.dtype(dtype).itemsize:
+        raise ValueError(f"{img_path.name} is too short for {n} x {n} samples")
+    pixel = _metres(lbl["MAP_SCALE"])
+    r0, r1, c0, c1 = (0, n, 0, n) if bounds is None else _window(bounds, center, pixel, n)
+    dn = np.memmap(img_path, dtype=dtype, mode="r", offset=byte_offset, shape=(n, n))[r0:r1, c0:c1]
+    height = dn.astype(np.float32) * np.float32(_number(lbl["SCALING_FACTOR"]))
     if "MISSING_CONSTANT" in lbl:
-        height[dn.reshape(n, n) == _number(lbl["MISSING_CONSTANT"])] = np.nan
+        height[dn == _number(lbl["MISSING_CONSTANT"])] = np.nan
 
-    return PolarDEM(height=height, pixel=_metres(lbl["MAP_SCALE"]), center=center)
+    return PolarDEM(height=height, pixel=pixel, pole_row=center - r0, pole_col=center - c0)
+
+
+def _window(bounds, center, pixel, n):
+    """Rows [r0, r1) and columns [c0, c1) holding every pixel bilinear interpolation needs inside bounds."""
+    x_min, x_max, y_min, y_max = bounds
+    r0, r1 = int(np.floor(center - y_max / pixel)), int(np.ceil(center - y_min / pixel)) + 2
+    c0, c1 = int(np.floor(center + x_min / pixel)), int(np.ceil(center + x_max / pixel)) + 2
+    r0, r1, c0, c1 = max(r0, 0), min(r1, n), max(c0, 0), min(c1, n)
+    if r0 >= r1 or c0 >= c1:
+        raise ValueError(f"bounds {bounds} lie outside the map")
+    return r0, r1, c0, c1
 
 
 def _read_label(path):

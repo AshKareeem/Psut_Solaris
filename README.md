@@ -4,16 +4,17 @@ Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine compu
 
 ```
 horizon/reference.py   tested reference engine (NumPy, one site)
-horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), lat/lon <-> grid
+horizon/terrain.py     terrain levels: 20 m terrain near the sites, the 240 m map beyond
+horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), memory-mapped, optionally cropped
 horizon/synthetic.py   test terrains with known answers (cone, ring, crater)
 horizon/fast.py        fast Numba engine: many sites in parallel, same answers as the reference
 horizon/sites.py       sites.csv (Step 0 -> Steps 1, 4): read with checks, write, demo and random site sets
-horizon/__init__.py    engine settings chosen by the convergence study (N_AZ, D_MAX, KAPPA)
+horizon/__init__.py    engine settings chosen by the convergence study (N_AZ, D_MAX, KAPPA, D_FINE)
 scripts/plot_horizon.py  plot the terrain and skyline of one site
 scripts/estimate_visibility.py  rough Sun / Earth visibility from a saved skyline
 scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
 scripts/benchmark.py   time the fast engine on real terrain and extrapolate the full grid
-scripts/convergence.py  choose range, step factor and azimuth count (skyline within 0.02 deg)
+scripts/convergence.py  choose range, near-field radius, step factor and azimuth count
 scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step 0's grid exists
 scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horizon_meta.json for Steps 3-4
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader,
@@ -26,10 +27,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 27 passed
+python -m pytest -q                # expect: 31 passed
 ```
 
-Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (26 passed, 1 skipped).
+Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (30 passed, 1 skipped).
 
 ## Step 1: synthetic demo (no download needed)
 
@@ -70,8 +71,8 @@ NASA's PGDA archive publishes average sunlight and Earth-visibility maps of the 
 Then read both at your rim site:
 
 ```
-python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608.TIF --lat -89.779 --lon -155.73
-python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608_EARTH.TIF --lat -89.779 --lon -155.73
+python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608.TIF --lat -89.778601 --lon -155.72556
+python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608_EARTH.TIF --lat -89.778601 --lon -155.72556
 ```
 
 The script uses the map's own projection, checks that it agrees with ours to within 1 m, applies the map's scale and offset, and prints the value at the site plus its 5×5 neighbourhood (±120 m).
@@ -83,10 +84,7 @@ python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --sa
 python scripts/estimate_visibility.py out/rim.npz
 ```
 
-- Sun: **86.6%** of the year.
-- Earth: **56.3%** of the time.
-
-Expect small differences: our Sun model is simplified, our terrain is coarser (240 m), and NASA averages over 18.6 years.
+On the 240 m map alone: Sun **86.6%**, Earth **56.3%**. NASA: Sun 6.3% at this pixel but 85.5% at the best pixel within ±120 m; Earth 29.3% and 56.7%. The 240 m map smooths the local crest into the site, so it looks lit. With 20 m terrain near the site (Step 6) the site is dark (0.3% Sun, 36.2% Earth) and the crest 103 m away gets 85.9% and 56.3%: NASA's picture.
 
 ## The direction convention (share with CE 2)
 
@@ -104,7 +102,7 @@ The yellow Sun band and blue Earth zone in the plot are rough guides. Exact Sun 
 python scripts/benchmark.py data/ldem_75s_240m.lbl
 ```
 
-On 12 threads: about 8 ms per site at 5,760 azimuths and 250 km, over 100 times the reference.
+On 12 threads: about 2 ms per site at 1,440 azimuths and 250 km on the 240 m map, over 100 times the reference.
 
 ## Step 4: convergence (choose the settings)
 
@@ -112,13 +110,29 @@ On 12 threads: about 8 ms per site at 5,760 azimuths and 250 km, over 100 times 
 python scripts/convergence.py data/ldem_75s_240m.lbl
 ```
 
-Runs the rim site plus 500 random sites within 6° of the pole over every combination of range (100–250 km), step factor (0.002–0.0005) and azimuth count (360–11,520), and picks the cheapest whose skyline stays within 0.02° of the finest in every direction. Azimuth error is measured *between* rays, where Steps 3–4 interpolate, against a reference twice as fine as any candidate. Result on the 240 m map: **5,760 azimuths, 250 km, κ = 0.002** (worst error 0.012°), stored in `horizon/__init__.py`; every script defaults to them. 200 km is not enough: distant massifs still change skylines by up to 0.8°. Takes about 2 minutes; re-run it when the terrain changes.
+Runs the rim site plus 500 random sites within 6° of the pole over every combination of range (100–250 km), step factor (0.002–0.00025) and azimuth count (360–11,520). With `--fine` it studies the 20 m near field instead of the range (Step 6). The rule: **every site's skyline within 0.02° of the finest settings in 99% of its directions**. Missing terrain shifts whole sectors of a site and fails it; single directions at sharp kinks converge slowly but don't change what planners see, and the study prints how much the chosen settings move each site's Sun and Earth visibility. Azimuth error is measured *between* rays, where Steps 3–4 interpolate. Result: **1,440 azimuths, 250 km, κ = 0.002**, stored in `horizon/__init__.py`; every script defaults to them. 200 km is not enough: distant massifs leave whole sectors of some sites 0.5° off. Takes about 4 minutes; re-run it when the terrain changes.
 
 ## Step 5: batch run (files for Steps 3–4)
 
 ```
 python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --out out/demo/sites.csv
-python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --out out/demo
+python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --fine data/ldem_875s_20m.lbl --out out/demo
 ```
 
 The demo grid is 20 × 20 sites, 480 m apart, around the rim site (site 210). `run_horizon.py` writes `horizon.npy` and `blocker.npy` (float32) and `complete.npy` (bool), each [sites, masts, n_az], plus `horizon_meta.json`. Read `n_az` and `masts_m` from the meta file, never assume them. Once Step 0 delivers the real `sites.csv`, run the same command on it; `horizon/sites.py` checks it first (missing columns, duplicate ids, x/y that disagree with lat/lon).
+
+## Step 6: 20 m terrain near the sites
+
+Download `ldem_875s_20m.img` and `.lbl` (115 MB, 87.5–90°S, ±75.8 km around the pole) from the same PDS folder into `data/`. Then:
+
+```
+python scripts/plot_horizon.py data/ldem_75s_240m.lbl --fine data/ldem_875s_20m.lbl --site shackleton-rim --save out/rim_fine.npz --out out/rim_fine.png
+python scripts/estimate_visibility.py out/rim_fine.npz
+python scripts/convergence.py data/ldem_75s_240m.lbl --fine data/ldem_875s_20m.lbl --within 0.43 --sites 150
+```
+
+Each ray samples the 20 m map out to `D_FINE` = 40 km from the site and the 240 m map beyond. The loader memory-maps the image and reads only the crop the sites need, so the 1.85 GB maps never load whole. If the 20 m map doesn't reach 40 km around a site, the engine stops with an error rather than quietly using coarser terrain. Expect the rim site to come out dark at a 2 m mast (0.3% Sun): a crest 103 m away and 9.5 m higher blocks it. At a 10 m mast it gets 80.4%.
+
+- The 87.5°S map serves sites within about 36 km of the pole. For every site within 6°, download `ldem_80s_20m` (1.85 GB, ±304 km).
+- The 240 m map is the 12 × 12 block mean of the 20 m map (1.6 m RMS), so the two join without offsets.
+- No max-pyramid. Measured on real terrain, a pyramid sampled bilinearly still misses peaks and pushes 3% of directions more than 0.02° too high; direct 20 m sampling is simpler and more accurate.

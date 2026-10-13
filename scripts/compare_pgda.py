@@ -5,7 +5,7 @@ Download from NASA PGDA (Lunar Polar Illumination, https://pgda.gsfc.nasa.gov/pr
   https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608_EARTH.TIF  (Earth)
 
 Usage:
-  python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608.TIF --lat -89.779 --lon -155.73
+  python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608.TIF --lat -89.778601 --lon -155.72556
 """
 import argparse
 import sys

@@ -9,7 +9,7 @@ from horizon.synthetic import cone, distance_grid
 def cone_dem():
     """A 500 m cone (slope atan(0.25) = 14.04 deg) on a 401 x 401 grid of 20 m pixels, peak at row 150, col 250."""
     z = cone(distance_grid(401, 20.0, 150, 250), peak=500.0, base_radius=2000.0)
-    return PolarDEM(height=z.astype(np.float32), pixel=20.0, center=200.0)
+    return PolarDEM(height=z.astype(np.float32), pixel=20.0, pole_row=200.0, pole_col=200.0)
 
 
 def test_demo_grid_round_trip(tmp_path):

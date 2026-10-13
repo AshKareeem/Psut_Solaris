@@ -20,6 +20,7 @@ from horizon.dem import read_polar_dem  # noqa: E402
 from horizon.fast import horizon_profiles_fast  # noqa: E402
 from horizon.reference import horizon_profile, step_schedule  # noqa: E402
 from horizon.sites import random_sites  # noqa: E402
+from horizon.terrain import single  # noqa: E402
 
 
 def timed(fn):
@@ -39,22 +40,23 @@ def main():
     args = ap.parse_args()
 
     dem = read_polar_dem(args.label)
+    terrain = single(dem)
     n_d = step_schedule(dem.pixel, args.dmax, args.kappa).size
     run = dict(mast=args.mast, d_max=args.dmax, n_az=args.n_az, kappa=args.kappa)
     rng = np.random.default_rng(0)
     print(f"{Path(args.label).name}: {dem.pixel:.0f} m pixels | {args.n_az} azimuths | d_max {args.dmax / 1e3:.0f} km "
           f"| kappa {args.kappa} | {n_d} steps per ray | {get_num_threads()} threads")
 
-    rows, cols = random_sites(dem, 1, 6.0, rng)
+    xs, ys = random_sites(1, 6.0, rng)
     print(f"first call (includes compiling, or loading the compile cache): "
-          f"{timed(lambda: horizon_profiles_fast(dem.height, dem.pixel, cols, rows, **run)):.2f} s")
-    t_ref = timed(lambda: horizon_profile(dem.height, dem.pixel, cols[0], rows[0], **run))
+          f"{timed(lambda: horizon_profiles_fast(terrain, xs, ys, **run)):.2f} s")
+    t_ref = timed(lambda: horizon_profile(terrain, xs[0], ys[0], **run))
     print(f"reference engine, 1 site: {t_ref:.2f} s")
 
     rate = 0.0
     for n in args.sites:
-        rows, cols = random_sites(dem, n, 6.0, rng)
-        t = timed(lambda: horizon_profiles_fast(dem.height, dem.pixel, cols, rows, **run))
+        xs, ys = random_sites(n, 6.0, rng)
+        t = timed(lambda: horizon_profiles_fast(terrain, xs, ys, **run))
         rate = n * args.n_az * n_d / t
         print(f"fast engine, {n:>5} sites: {t:7.2f} s | {t / n * 1e3:8.1f} ms per site | "
               f"{rate:.2e} samples/s | {t_ref * n / t:6.0f}x the reference")

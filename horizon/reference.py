@@ -25,18 +25,25 @@ def bilinear(dem, col, row):
     return np.where(ok, z, np.nan)
 
 
-def horizon_profile(dem, pixel, col0, row0, mast, d_max, n_az=1440, kappa=0.001):
-    """Horizon elevation H (deg), blocker distance (m) and completeness flag for one site."""
+def horizon_profile(terrain, x0, y0, mast, d_max, n_az=1440, kappa=0.001):
+    """Horizon elevation H (deg), blocker distance (m) and completeness flag for one site at map (x0, y0) metres."""
     theta = np.arange(n_az) * (2 * np.pi / n_az)        # from map +x, counterclockwise
-    d = step_schedule(pixel, d_max, kappa)
-    phi = d / R                                         # central angle to each sample
-    cols = col0 + np.outer(np.cos(theta), d) / pixel
-    rows = row0 - np.outer(np.sin(theta), d) / pixel    # map +y = smaller row index
-    z = bilinear(dem, cols, rows)
-    z0 = float(bilinear(dem, np.array(col0), np.array(row0)))
+    d = step_schedule(terrain.levels[0].pixel, d_max, kappa)
+    terrain.check_coverage(np.array([x0]), np.array([y0]), d)
+    level = terrain.level_of(d)
+    z = np.empty((n_az, d.size))
+    for i, dem in enumerate(terrain.levels):           # each level samples its own stretch of every ray
+        k = level == i
+        row0, col0 = dem.xy_to_rowcol(x0, y0)
+        cols = col0 + np.outer(np.cos(theta), d[k]) / dem.pixel
+        rows = row0 - np.outer(np.sin(theta), d[k]) / dem.pixel    # map +y = smaller row index
+        z[:, k] = bilinear(dem.height, cols, rows)
+    row0, col0 = terrain.levels[0].xy_to_rowcol(x0, y0)
+    z0 = float(bilinear(terrain.levels[0].height, col0, row0))
     if np.isnan(z0):
-        raise ValueError(f"site at col {col0}, row {row0} is off the map or on a no-data pixel")
+        raise ValueError(f"site at x {x0:.0f} m, y {y0:.0f} m is on a no-data pixel")
     r_obs = R + z0 + mast
+    phi = d / R                                         # central angle to each sample
     r_pt = R + z
     up = r_pt * np.cos(phi) - r_obs                     # height above the observer's level
     out = r_pt * np.sin(phi)                            # horizontal distance

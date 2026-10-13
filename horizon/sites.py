@@ -10,7 +10,7 @@ from horizon.dem import latlon_to_xy, xy_to_latlon
 from horizon.reference import R
 
 COLUMNS = ("id", "x", "y", "lat", "lon", "height", "slope")
-RIM_SITE = (-89.779, -155.73)  # Shackleton rim: highest rim point on the 240 m map (plot_horizon.py --site shackleton-rim)
+RIM_SITE = (-89.778601, -155.72556)  # Shackleton rim: centre of the highest rim pixel of the 240 m map (row 1931, col 1894)
 
 
 def read_sites(path):
@@ -38,7 +38,7 @@ def read_sites(path):
 def write_sites(path, dem, rows, cols):
     """Write sites at integer grid positions (rows, cols) of dem, with their height and slope."""
     rows, cols = np.asarray(rows), np.asarray(cols)
-    x, y = (cols - dem.center) * dem.pixel, (dem.center - rows) * dem.pixel
+    x, y = dem.rowcol_to_xy(rows, cols)
     lat, lon = xy_to_latlon(x, y)
     height, slope = dem.height[rows, cols], slope_deg(dem, rows, cols)
     with open(path, "w", newline="") as f:
@@ -66,8 +66,8 @@ def grid_around(dem, lat, lon, n, step):
     return rr.ravel(), cc.ravel()
 
 
-def random_sites(dem, n, max_deg, rng):
-    """Grid (rows, cols) of n random sites within max_deg of the pole, uniform in area."""
+def random_sites(n, max_deg, rng):
+    """Map positions (x, y) in metres of n random sites within max_deg of the pole, uniform in area."""
     r = np.radians(max_deg) * R * np.sqrt(rng.uniform(0, 1, n))
     a = rng.uniform(0, 2 * np.pi, n)
-    return dem.center - r * np.sin(a) / dem.pixel, dem.center + r * np.cos(a) / dem.pixel
+    return r * np.cos(a), r * np.sin(a)

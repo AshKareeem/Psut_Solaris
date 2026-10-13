@@ -3,6 +3,7 @@
 Real LOLA terrain:
   python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-floor
   python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --mast 2 --save out/rim.npz
+  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --fine data/ldem_875s_20m.lbl --site shackleton-rim
   python scripts/plot_horizon.py data/ldem_75s_240m.lbl --lat -89.5 --lon 200
 Synthetic terrain (no download needed):
   python scripts/plot_horizon.py --synthetic --site shackleton-floor
@@ -18,11 +19,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from horizon import D_MAX, KAPPA, N_AZ  # noqa: E402
+from horizon import D_FINE, D_MAX, KAPPA, N_AZ  # noqa: E402
 from horizon.dem import PolarDEM, read_polar_dem  # noqa: E402
 from horizon.fast import horizon_profiles_fast  # noqa: E402
 from horizon.reference import bilinear  # noqa: E402
 from horizon.synthetic import bowl_crater, cone, distance_grid  # noqa: E402
+from horizon.terrain import fine_bounds, multires, single  # noqa: E402
 from scripts.estimate_visibility import EARTH_HALF, EARTH_MAX, EARTH_THETA, SUN_MAX  # noqa: E402
 
 SHACKLETON = (-89.67, 129.78)  # crater centre (deg); about 21 km wide and 4.2 km deep
@@ -31,7 +33,7 @@ SHACKLETON_RADIUS = 10_500.0   # m
 
 def synthetic_dem():
     """A Shackleton-like crater plus two mountains on a 100 m grid, 160 km wide, pole in the middle."""
-    dem = PolarDEM(height=np.zeros((1601, 1601), np.float32), pixel=100.0, center=800.0)
+    dem = PolarDEM(height=np.zeros((1601, 1601), np.float32), pixel=100.0, pole_row=800.0, pole_col=800.0)
     row, col = dem.latlon_to_rowcol(*SHACKLETON)
     z = bowl_crater(distance_grid(1601, 100.0, row, col), SHACKLETON_RADIUS, depth=4200.0, rim=300.0)
     z += cone(distance_grid(1601, 100.0, 800 - 300, 800 + 250), peak=2500.0, base_radius=8000.0)
@@ -98,6 +100,8 @@ def plot(dem, row, col, H, D, theta, title, out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("label", nargs="?", help="PDS3 label (.LBL) of a south-polar LOLA DEM")
+    ap.add_argument("--fine", help="PDS3 label of a finer map for the terrain near the site")
+    ap.add_argument("--dfine", type=float, default=D_FINE, help="how far from the site the fine map serves (m)")
     ap.add_argument("--synthetic", action="store_true", help="use built-in synthetic terrain")
     ap.add_argument("--site", choices=["shackleton-floor", "shackleton-rim"])
     ap.add_argument("--lat", type=float)
@@ -112,12 +116,18 @@ def main():
 
     if args.synthetic == bool(args.label):
         raise SystemExit("give either a .LBL file or --synthetic")
+    if args.synthetic and args.fine:
+        raise SystemExit("--fine needs a real map")
     dem = synthetic_dem() if args.synthetic else read_polar_dem(args.label)
     row, col = pick_site(dem, args)
     lat, lon = dem.rowcol_to_latlon(row, col)
-    H, D, ok = (a[0] for a in horizon_profiles_fast(dem.height, dem.pixel, np.array([col]), np.array([row]),
+    x, y = dem.rowcol_to_xy(row, col)
+    terrain = (multires(read_polar_dem(args.fine, fine_bounds(x, y, args.dfine)), dem, args.dfine)
+               if args.fine else single(dem))
+    H, D, ok = (a[0] for a in horizon_profiles_fast(terrain, np.array([x]), np.array([y]),
                                                     args.mast, args.dmax, args.n_az, args.kappa))
-    ground = float(bilinear(dem.height, np.array(col), np.array(row)))  # after the engine has checked the site
+    near = terrain.levels[0]                            # the observer stands on the finest level
+    ground = float(bilinear(near.height, *near.xy_to_rowcol(x, y)[::-1]))  # after the engine has checked the site
     theta = np.arange(args.n_az) * 360.0 / args.n_az
     if args.save:
         Path(args.save).parent.mkdir(parents=True, exist_ok=True)
@@ -126,7 +136,8 @@ def main():
     summarize(H, theta, ok, float(lat), float(lon), ground, args.mast)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     name = args.site or f"{lat:.2f}, {lon:.2f}"
-    plot(dem, row, col, H, D, theta, f"Skyline: {name} ({'synthetic' if args.synthetic else 'LOLA'})", args.out)
+    source = "synthetic" if args.synthetic else f"LOLA {near.pixel:g} m + {dem.pixel:g} m" if args.fine else "LOLA"
+    plot(dem, row, col, H, D, theta, f"Skyline: {name} ({source})", args.out)
 
 
 if __name__ == "__main__":
