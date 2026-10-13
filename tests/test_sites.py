@@ -23,6 +23,12 @@ def test_demo_grid_round_trip(tmp_path):
     assert np.allclose(r, rows, atol=1e-3) and np.allclose(c, cols, atol=1e-3)
 
 
+def test_grid_off_the_map_fails_fast():
+    dem = cone_dem()
+    with pytest.raises(ValueError, match="runs off the map"):
+        grid_around(dem, *dem.rowcol_to_latlon(5, 200), n=3, step=5)  # would wrap to the bottom rows
+
+
 def test_slope_on_the_cone_flank():
     assert slope_deg(cone_dem(), np.array([150]), np.array([255]))[0] == pytest.approx(np.degrees(np.arctan(0.25)))
 

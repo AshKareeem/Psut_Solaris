@@ -104,7 +104,7 @@ The yellow Sun band and blue Earth zone in the plot are rough guides. Exact Sun 
 python scripts/benchmark.py data/ldem_75s_240m.lbl
 ```
 
-On 12 threads: about 4.6 ms per site at 2,880 azimuths and 250 km, about 100 times the reference.
+On 12 threads: about 8 ms per site at 5,760 azimuths and 250 km, over 100 times the reference.
 
 ## Step 4: convergence (choose the settings)
 
@@ -112,7 +112,7 @@ On 12 threads: about 4.6 ms per site at 2,880 azimuths and 250 km, about 100 tim
 python scripts/convergence.py data/ldem_75s_240m.lbl
 ```
 
-Runs the rim site plus 200 random sites within 6° of the pole over every combination of range (100–250 km), step factor (0.002–0.0005) and azimuth count (360–5,760), and picks the cheapest whose skyline stays within 0.02° of the finest. Azimuth error is measured *between* rays, where Steps 3–4 interpolate. Result on the 240 m map: **2,880 azimuths, 250 km, κ = 0.002**, stored in `horizon/__init__.py`; every script defaults to them. 150 km is not enough: it misses massifs up to 250 km away (errors up to 1.4°). Re-run it when the terrain changes.
+Runs the rim site plus 500 random sites within 6° of the pole over every combination of range (100–250 km), step factor (0.002–0.0005) and azimuth count (360–11,520), and picks the cheapest whose skyline stays within 0.02° of the finest in every direction. Azimuth error is measured *between* rays, where Steps 3–4 interpolate, against a reference twice as fine as any candidate. Result on the 240 m map: **5,760 azimuths, 250 km, κ = 0.002** (worst error 0.012°), stored in `horizon/__init__.py`; every script defaults to them. 200 km is not enough: distant massifs still change skylines by up to 0.8°. Takes about 2 minutes; re-run it when the terrain changes.
 
 ## Step 5: batch run (files for Steps 3–4)
 

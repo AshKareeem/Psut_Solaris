@@ -5,7 +5,8 @@ rim site plus random sites within 6 deg of the pole, for the tallest mast (it se
 
 Every (d_max, kappa) runs once on the finest azimuth grid. A coarser grid is every k-th of those rays, linearly
 interpolated back onto the fine grid (the way Steps 3-4 interpolate H), so the error *between* rays is measured,
-not just at rays both grids share. At 250 km the finest rays are 273 m apart, about one pixel of the 240 m map.
+not just at rays both grids share. The reference is twice as fine as any candidate, so every candidate is measured,
+and 500 sites make the worst case stable. At 250 km the finest rays are 136 m apart, about half a 240 m pixel.
 
 Usage:
   python scripts/convergence.py data/ldem_75s_240m.lbl
@@ -24,7 +25,7 @@ from horizon.sites import RIM_SITE, random_sites  # noqa: E402
 
 D_MAX = (100e3, 150e3, 200e3, 250e3)  # m
 KAPPA = (0.002, 0.001, 0.0005)
-N_AZ = (360, 720, 1440, 2880, 5760)   # the last one is the reference grid
+N_AZ = (360, 720, 1440, 2880, 5760, 11520)  # the last one is the reference grid
 TOL = 0.02                            # deg
 
 
@@ -39,7 +40,7 @@ def between_rays(H, every):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("label", help="PDS3 label (.LBL) of a south-polar LOLA DEM")
-    ap.add_argument("--sites", type=int, default=200, help="random sites within 6 deg of the pole, plus the rim site")
+    ap.add_argument("--sites", type=int, default=500, help="random sites within 6 deg of the pole, plus the rim site")
     ap.add_argument("--mast", type=float, default=10.0, help="observer height (m); the tallest mast sees farthest")
     args = ap.parse_args()
 

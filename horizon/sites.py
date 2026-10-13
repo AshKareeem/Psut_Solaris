@@ -61,6 +61,8 @@ def grid_around(dem, lat, lon, n, step):
     row, col = (int(round(float(v))) for v in dem.latlon_to_rowcol(lat, lon))
     offsets = (np.arange(n) - n // 2) * step
     rr, cc = np.meshgrid(row + offsets, col + offsets, indexing="ij")
+    if min(rr.min(), cc.min()) < 1 or rr.max() > dem.height.shape[0] - 2 or cc.max() > dem.height.shape[1] - 2:
+        raise ValueError(f"a {n} x {n} grid {step} pixels apart around {lat}, {lon} runs off the map")
     return rr.ravel(), cc.ravel()
 
 

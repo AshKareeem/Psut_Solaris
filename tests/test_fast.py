@@ -37,6 +37,14 @@ def test_fast_flags_rays_leaving_the_map_like_the_reference():
     assert_matches_reference(terrain(), PIXEL, cols, rows, mast=2.0, d_max=12_000, n_az=360, kappa=0.002)
 
 
+def test_fast_skips_no_data_holes_like_the_reference():
+    dem = terrain()
+    dem[500:540, 500:900] = np.nan  # a band that many rays cross
+    dem[1450:, :] = np.nan          # and the bottom edge, where rays end: those must be incomplete
+    cols, rows = np.array([700.0, 820.0, 650.0]), np.array([650.0, 800.0, 1300.0])
+    assert_matches_reference(dem, PIXEL, cols, rows, mast=2.0, d_max=12_000, n_az=720, kappa=0.002)
+
+
 def test_fast_site_off_the_map_fails_fast():
     with pytest.raises(ValueError, match=r"sites \[1\] are off the map"):
         horizon_profiles_fast(terrain(), PIXEL, np.array([750.0, 5000.0]), np.array([750.0, 750.0]),

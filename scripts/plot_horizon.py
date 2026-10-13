@@ -20,7 +20,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from horizon import D_MAX, KAPPA, N_AZ  # noqa: E402
 from horizon.dem import PolarDEM, read_polar_dem  # noqa: E402
-from horizon.reference import horizon_profile  # noqa: E402
+from horizon.fast import horizon_profiles_fast  # noqa: E402
+from horizon.reference import bilinear  # noqa: E402
 from horizon.synthetic import bowl_crater, cone, distance_grid  # noqa: E402
 from scripts.estimate_visibility import EARTH_HALF, EARTH_MAX, EARTH_THETA, SUN_MAX  # noqa: E402
 
@@ -114,9 +115,9 @@ def main():
     dem = synthetic_dem() if args.synthetic else read_polar_dem(args.label)
     row, col = pick_site(dem, args)
     lat, lon = dem.rowcol_to_latlon(row, col)
-    ground = float(dem.height[int(round(row)), int(round(col))])
-
-    H, D, ok = horizon_profile(dem.height, dem.pixel, col, row, args.mast, args.dmax, args.n_az, args.kappa)
+    H, D, ok = (a[0] for a in horizon_profiles_fast(dem.height, dem.pixel, np.array([col]), np.array([row]),
+                                                    args.mast, args.dmax, args.n_az, args.kappa))
+    ground = float(bilinear(dem.height, np.array(col), np.array(row)))  # after the engine has checked the site
     theta = np.arange(args.n_az) * 360.0 / args.n_az
     if args.save:
         Path(args.save).parent.mkdir(parents=True, exist_ok=True)
