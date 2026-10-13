@@ -2,7 +2,7 @@
 
 Real LOLA terrain:
   python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-floor
-  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --mast 2
+  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --mast 2 --save out/rim.npz
   python scripts/plot_horizon.py data/ldem_75s_240m.lbl --lat -89.5 --lon 200
 Synthetic terrain (no download needed):
   python scripts/plot_horizon.py --synthetic --site shackleton-floor
@@ -21,12 +21,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from horizon.dem import PolarDEM, read_polar_dem  # noqa: E402
 from horizon.reference import horizon_profile  # noqa: E402
 from horizon.synthetic import bowl_crater, cone, distance_grid  # noqa: E402
+from scripts.estimate_visibility import EARTH_HALF, EARTH_MAX, EARTH_THETA, SUN_MAX  # noqa: E402
 
 SHACKLETON = (-89.67, 129.78)  # crater centre (deg); about 21 km wide and 4.2 km deep
 SHACKLETON_RADIUS = 10_500.0   # m
-SUN_MAX = 1.54                 # deg: the Sun stays within this of level at the pole
-EARTH_MAX = 6.7                # deg: Earth bobs this far up and down (libration)
-EARTH_THETA, EARTH_HALF = 90.0, 8.0  # approx. Earth direction near the pole: map +y, toward longitude 0
 
 
 def synthetic_dem():
@@ -107,6 +105,7 @@ def main():
     ap.add_argument("--n-az", type=int, default=1440)
     ap.add_argument("--kappa", type=float, default=0.002)
     ap.add_argument("--out", default="out/horizon.png")
+    ap.add_argument("--save", help="also save the skyline (H, D, theta, ok, lat, lon, mast) to this .npz")
     args = ap.parse_args()
 
     if args.synthetic == bool(args.label):
@@ -117,8 +116,11 @@ def main():
     ground = float(dem.height[int(round(row)), int(round(col))])
 
     H, D, ok = horizon_profile(dem.height, dem.pixel, col, row, args.mast, args.dmax, args.n_az, args.kappa)
-    np.save("out/rim_H.npy", H)
     theta = np.arange(args.n_az) * 360.0 / args.n_az
+    if args.save:
+        Path(args.save).parent.mkdir(parents=True, exist_ok=True)
+        np.savez(args.save, H=H, D=D, theta=theta, ok=ok, lat=lat, lon=lon, mast=args.mast)
+        print(f"saved {args.save}")
     summarize(H, theta, ok, float(lat), float(lon), ground, args.mast)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     name = args.site or f"{lat:.2f}, {lon:.2f}"

@@ -33,7 +33,10 @@ def horizon_profile(dem, pixel, col0, row0, mast, d_max, n_az=1440, kappa=0.001)
     cols = col0 + np.outer(np.cos(theta), d) / pixel
     rows = row0 - np.outer(np.sin(theta), d) / pixel    # map +y = smaller row index
     z = bilinear(dem, cols, rows)
-    r_obs = R + float(bilinear(dem, np.array(col0), np.array(row0))) + mast
+    z0 = float(bilinear(dem, np.array(col0), np.array(row0)))
+    if np.isnan(z0):
+        raise ValueError(f"site at col {col0}, row {row0} is off the map or on a no-data pixel")
+    r_obs = R + z0 + mast
     r_pt = R + z
     up = r_pt * np.cos(phi) - r_obs                     # height above the observer's level
     out = r_pt * np.sin(phi)                            # horizontal distance

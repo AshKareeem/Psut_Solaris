@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from horizon.reference import R, horizon_profile
 from horizon.synthetic import cone, distance_grid, ring
@@ -37,3 +38,8 @@ def test_ring_crater_same_in_every_direction():
 def test_ray_leaving_the_map_is_flagged():
     H, D, ok = horizon_profile(np.zeros((201, 201)), PIXEL, 100, 100, mast=2.0, d_max=15_000)
     assert not ok.any()
+
+
+def test_site_off_the_map_fails_fast():
+    with pytest.raises(ValueError, match="off the map"):
+        horizon_profile(np.zeros((201, 201)), PIXEL, 500, 100, mast=2.0, d_max=1_000)

@@ -8,7 +8,7 @@ horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), la
 horizon/synthetic.py   test terrains with known answers (cone, ring, crater)
 horizon/fast.py        YOUR WEEK-2 TASK: the fast Numba engine
 scripts/plot_horizon.py  plot the terrain and skyline of one site
-scripts/sunlit_fraction.py  rough sunlit fraction of the year from a saved skyline
+scripts/estimate_visibility.py  rough Sun / Earth visibility from a saved skyline
 scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader, fast vs reference
 ```
@@ -19,7 +19,7 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 9 passed, 1 skipped
+python -m pytest -q                # expect: 14 passed, 1 skipped
 ```
 
 The skipped test is `test_fast.py`. It switches on when you implement `horizon/fast.py`.
@@ -70,8 +70,14 @@ python scripts/compare_pgda.py data/AVGVISIB_85S_060M_201608_EARTH.TIF --lat -89
 The script uses the map's own projection, checks that it agrees with ours to within 1 m, applies the map's scale and offset, and prints the value at the site plus its 5×5 neighbourhood (±120 m).
 
 **Our rough estimates to compare against:**
-- Sun: **86%** of the year.
-- Earth: about **57%** of the time.
+
+```
+python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --save out/rim.npz
+python scripts/estimate_visibility.py out/rim.npz
+```
+
+- Sun: **86.7%** of the year.
+- Earth: **56.3%** of the time.
 
 Expect small differences: our Sun model is simplified, our terrain is coarser (240 m), and NASA averages over 18.6 years.
 
