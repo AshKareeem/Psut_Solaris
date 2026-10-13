@@ -3,5 +3,4 @@ matplotlib
 pytest
 rasterio
 pyproj
-# week 2:
-# numba
+numba

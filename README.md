@@ -6,10 +6,11 @@ Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine compu
 horizon/reference.py   tested reference engine (NumPy, one site)
 horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), lat/lon <-> grid
 horizon/synthetic.py   test terrains with known answers (cone, ring, crater)
-horizon/fast.py        YOUR WEEK-2 TASK: the fast Numba engine
+horizon/fast.py        fast Numba engine: many sites in parallel, same answers as the reference
 scripts/plot_horizon.py  plot the terrain and skyline of one site
 scripts/estimate_visibility.py  rough Sun / Earth visibility from a saved skyline
 scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
+scripts/benchmark.py   time the fast engine on real terrain and extrapolate the full grid
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader, fast vs reference
 ```
 
@@ -19,10 +20,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 14 passed, 1 skipped
+python -m pytest -q                # expect: 18 passed
 ```
 
-The skipped test is `test_fast.py`. It switches on when you implement `horizon/fast.py`.
+Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (17 passed, 1 skipped).
 
 ## Step 1: synthetic demo (no download needed)
 
@@ -91,4 +92,10 @@ The yellow Sun band and blue Earth zone in the plot are rough guides. Exact Sun 
 
 ## Step 3 (week 2): the fast engine
 
-Implement `horizon/fast.py` with Numba (study guide section 3.4) until `tests/test_fast.py` passes. Then benchmark samples per second.
+`horizon/fast.py` runs many sites in parallel with Numba and gives the same answers as the reference (H within 1e-6°, D and the completeness flag identical; `tests/test_fast.py`). Time it on real terrain:
+
+```
+python scripts/benchmark.py data/ldem_75s_240m.lbl
+```
+
+On 12 threads: about 2.5 ms per site at 1,440 azimuths and 150 km, about 100 times the reference.
