@@ -23,8 +23,10 @@ class PolarDEM:
     center: float       # row and column index of the pole (the grid is square)
 
     def latlon_to_rowcol(self, lat_deg, lon_deg):
-        x, y = latlon_to_xy(lat_deg, lon_deg)
-        return self.center - y / self.pixel, self.center + x / self.pixel
+        return self.xy_to_rowcol(*latlon_to_xy(lat_deg, lon_deg))
+
+    def xy_to_rowcol(self, x, y):
+        return self.center - np.asarray(y) / self.pixel, self.center + np.asarray(x) / self.pixel
 
     def rowcol_to_latlon(self, row, col):
         x = (np.asarray(col) - self.center) * self.pixel

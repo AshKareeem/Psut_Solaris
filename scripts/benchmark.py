@@ -15,16 +15,11 @@ import numpy as np
 from numba import get_num_threads
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from horizon import D_MAX, KAPPA, N_AZ  # noqa: E402
 from horizon.dem import read_polar_dem  # noqa: E402
 from horizon.fast import horizon_profiles_fast  # noqa: E402
-from horizon.reference import R, horizon_profile, step_schedule  # noqa: E402
-
-
-def random_sites(dem, n, max_deg, rng):
-    """Grid (cols, rows) of n random sites within max_deg of the pole, uniform in area."""
-    r = np.radians(max_deg) * R * np.sqrt(rng.uniform(0, 1, n))
-    a = rng.uniform(0, 2 * np.pi, n)
-    return dem.center + r * np.cos(a) / dem.pixel, dem.center - r * np.sin(a) / dem.pixel
+from horizon.reference import horizon_profile, step_schedule  # noqa: E402
+from horizon.sites import random_sites  # noqa: E402
 
 
 def timed(fn):
@@ -38,9 +33,9 @@ def main():
     ap.add_argument("label", help="PDS3 label (.LBL) of a south-polar LOLA DEM")
     ap.add_argument("--sites", type=int, nargs="+", default=[1, 10, 100])
     ap.add_argument("--mast", type=float, default=2.0)
-    ap.add_argument("--dmax", type=float, default=150_000.0)
-    ap.add_argument("--n-az", type=int, default=1440)
-    ap.add_argument("--kappa", type=float, default=0.002)
+    ap.add_argument("--dmax", type=float, default=D_MAX)
+    ap.add_argument("--n-az", type=int, default=N_AZ)
+    ap.add_argument("--kappa", type=float, default=KAPPA)
     args = ap.parse_args()
 
     dem = read_polar_dem(args.label)
@@ -50,7 +45,7 @@ def main():
     print(f"{Path(args.label).name}: {dem.pixel:.0f} m pixels | {args.n_az} azimuths | d_max {args.dmax / 1e3:.0f} km "
           f"| kappa {args.kappa} | {n_d} steps per ray | {get_num_threads()} threads")
 
-    cols, rows = random_sites(dem, 1, 6.0, rng)
+    rows, cols = random_sites(dem, 1, 6.0, rng)
     print(f"first call (includes compiling, or loading the compile cache): "
           f"{timed(lambda: horizon_profiles_fast(dem.height, dem.pixel, cols, rows, **run)):.2f} s")
     t_ref = timed(lambda: horizon_profile(dem.height, dem.pixel, cols[0], rows[0], **run))
@@ -58,15 +53,16 @@ def main():
 
     rate = 0.0
     for n in args.sites:
-        cols, rows = random_sites(dem, n, 6.0, rng)
+        rows, cols = random_sites(dem, n, 6.0, rng)
         t = timed(lambda: horizon_profiles_fast(dem.height, dem.pixel, cols, rows, **run))
         rate = n * args.n_az * n_d / t
         print(f"fast engine, {n:>5} sites: {t:7.2f} s | {t / n * 1e3:8.1f} ms per site | "
               f"{rate:.2e} samples/s | {t_ref * n / t:6.0f}x the reference")
 
-    final_steps = step_schedule(20.0, 200_000.0, 0.002).size
-    final = 10_000 * 4 * 1440 * final_steps
-    print(f"full grid at this rate: 10,000 sites x 4 masts x 1440 azimuths x {final_steps} steps (20 m, 200 km) "
+    final_steps = step_schedule(20.0, D_MAX, KAPPA).size
+    final = 10_000 * 4 * N_AZ * final_steps
+    print(f"full grid at this rate: 10,000 sites x 4 masts x {N_AZ} azimuths x {final_steps} steps "
+          f"(20 m, {D_MAX / 1e3:.0f} km) "
           f"= {final:.2e} samples -> about {final / rate / 60:.0f} min. Rough: the 20 m multi-resolution "
           f"terrain will change the rate.")
 

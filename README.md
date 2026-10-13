@@ -1,4 +1,4 @@
-# Horizon engine: week 1
+# Horizon engine
 
 Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine computes a site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
 
@@ -7,11 +7,17 @@ horizon/reference.py   tested reference engine (NumPy, one site)
 horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), lat/lon <-> grid
 horizon/synthetic.py   test terrains with known answers (cone, ring, crater)
 horizon/fast.py        fast Numba engine: many sites in parallel, same answers as the reference
+horizon/sites.py       sites.csv (Step 0 -> Steps 1, 4): read with checks, write, demo and random site sets
+horizon/__init__.py    engine settings chosen by the convergence study (N_AZ, D_MAX, KAPPA)
 scripts/plot_horizon.py  plot the terrain and skyline of one site
 scripts/estimate_visibility.py  rough Sun / Earth visibility from a saved skyline
 scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
 scripts/benchmark.py   time the fast engine on real terrain and extrapolate the full grid
-tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader, fast vs reference
+scripts/convergence.py  choose range, step factor and azimuth count (skyline within 0.02 deg)
+scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step 0's grid exists
+scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horizon_meta.json for Steps 3-4
+tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader,
+                       estimates, fast vs reference, sites.csv checks, convergence, batch run end to end
 ```
 
 ## Setup
@@ -20,10 +26,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 18 passed
+python -m pytest -q                # expect: 25 passed
 ```
 
-Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (17 passed, 1 skipped).
+Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (24 passed, 1 skipped).
 
 ## Step 1: synthetic demo (no download needed)
 
@@ -77,7 +83,7 @@ python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --sa
 python scripts/estimate_visibility.py out/rim.npz
 ```
 
-- Sun: **86.7%** of the year.
+- Sun: **86.6%** of the year.
 - Earth: **56.3%** of the time.
 
 Expect small differences: our Sun model is simplified, our terrain is coarser (240 m), and NASA averages over 18.6 years.
@@ -98,4 +104,21 @@ The yellow Sun band and blue Earth zone in the plot are rough guides. Exact Sun 
 python scripts/benchmark.py data/ldem_75s_240m.lbl
 ```
 
-On 12 threads: about 2.5 ms per site at 1,440 azimuths and 150 km, about 100 times the reference.
+On 12 threads: about 4.6 ms per site at 2,880 azimuths and 250 km, about 100 times the reference.
+
+## Step 4: convergence (choose the settings)
+
+```
+python scripts/convergence.py data/ldem_75s_240m.lbl
+```
+
+Runs the rim site plus 200 random sites within 6° of the pole over every combination of range (100–250 km), step factor (0.002–0.0005) and azimuth count (360–5,760), and picks the cheapest whose skyline stays within 0.02° of the finest. Azimuth error is measured *between* rays, where Steps 3–4 interpolate. Result on the 240 m map: **2,880 azimuths, 250 km, κ = 0.002**, stored in `horizon/__init__.py`; every script defaults to them. 150 km is not enough: it misses massifs up to 250 km away (errors up to 1.4°). Re-run it when the terrain changes.
+
+## Step 5: batch run (files for Steps 3–4)
+
+```
+python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --out out/demo/sites.csv
+python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --out out/demo
+```
+
+The demo grid is 20 × 20 sites, 480 m apart, around the rim site (site 210). `run_horizon.py` writes `horizon.npy` and `blocker.npy` (float32) and `complete.npy` (bool), each [sites, masts, n_az], plus `horizon_meta.json`. Read `n_az` and `masts_m` from the meta file, never assume them. Once Step 0 delivers the real `sites.csv`, run the same command on it; `horizon/sites.py` checks it first (missing columns, duplicate ids, x/y that disagree with lat/lon).

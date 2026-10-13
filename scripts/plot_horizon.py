@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from horizon import D_MAX, KAPPA, N_AZ  # noqa: E402
 from horizon.dem import PolarDEM, read_polar_dem  # noqa: E402
 from horizon.reference import horizon_profile  # noqa: E402
 from horizon.synthetic import bowl_crater, cone, distance_grid  # noqa: E402
@@ -101,9 +102,9 @@ def main():
     ap.add_argument("--lat", type=float)
     ap.add_argument("--lon", type=float)
     ap.add_argument("--mast", type=float, default=2.0, help="observer height above ground (m)")
-    ap.add_argument("--dmax", type=float, default=150_000.0, help="look-out range (m)")
-    ap.add_argument("--n-az", type=int, default=1440)
-    ap.add_argument("--kappa", type=float, default=0.002)
+    ap.add_argument("--dmax", type=float, default=D_MAX, help="look-out range (m)")
+    ap.add_argument("--n-az", type=int, default=N_AZ)
+    ap.add_argument("--kappa", type=float, default=KAPPA)
     ap.add_argument("--out", default="out/horizon.png")
     ap.add_argument("--save", help="also save the skyline (H, D, theta, ok, lat, lon, mast) to this .npz")
     args = ap.parse_args()
