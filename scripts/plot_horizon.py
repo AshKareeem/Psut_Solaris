@@ -1,9 +1,9 @@
 """Plot the horizon (skyline) of one site.
 
 Real LOLA terrain:
-  python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --site shackleton-floor
-  python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --site shackleton-rim --mast 2
-  python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --lat -89.5 --lon 200
+  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-floor
+  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --mast 2
+  python scripts/plot_horizon.py data/ldem_75s_240m.lbl --lat -89.5 --lon 200
 Synthetic terrain (no download needed):
   python scripts/plot_horizon.py --synthetic --site shackleton-floor
 """

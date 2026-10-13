@@ -8,7 +8,9 @@ horizon/dem.py         loads LOLA south-polar height maps (PDS3 .LBL + .IMG), la
 horizon/synthetic.py   test terrains with known answers (cone, ring, crater)
 horizon/fast.py        YOUR WEEK-2 TASK: the fast Numba engine
 scripts/plot_horizon.py  plot the terrain and skyline of one site
-tests/                 smooth Moon, cone, ring crater, map loading, direction convention, fast vs reference
+scripts/sunlit_fraction.py  rough sunlit fraction of the year from a saved skyline
+scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
+tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader, fast vs reference
 ```
 
 ## Setup
@@ -17,7 +19,7 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 8 passed, 1 skipped               
+python -m pytest -q                # expect: 9 passed, 1 skipped
 ```
 
 The skipped test is `test_fast.py`. It switches on when you implement `horizon/fast.py`.
@@ -40,8 +42,8 @@ python scripts/plot_horizon.py --synthetic --site shackleton-floor --dmax 60000 
 4. Run:
 
 ```
-python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --site shackleton-floor --out out/floor.png
-python scripts/plot_horizon.py data/LDEM_75S_240M.LBL --site shackleton-rim --out out/rim.png
+python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-floor --out out/floor.png
+python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --out out/rim.png
 ```
 
 ### Sanity checks (all must hold)
