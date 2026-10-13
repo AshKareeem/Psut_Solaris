@@ -26,10 +26,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 25 passed
+python -m pytest -q                # expect: 27 passed
 ```
 
-Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (24 passed, 1 skipped).
+Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (26 passed, 1 skipped).
 
 ## Step 1: synthetic demo (no download needed)
 
