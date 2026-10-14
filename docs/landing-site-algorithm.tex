@@ -107,7 +107,9 @@ H(\theta) = \max_{d \le D_{\max}} \operatorname{atan2}\!\Big( (R+z)\cos\varphi -
 
 Here $z(d)$ is the terrain height at distance $d$ (interpolated between pixels), $h_0$ is the site height, $m$ is the mast height, $R = 1737.4$\,km is the Moon's radius, and $\varphi$ is the angle between the site and the terrain point, seen from the Moon's centre. The formula is exact on a sphere. For intuition, it is almost the same as $\arctan\!\big((z - h_0 - m - d^2/2R)/d\big)$, where $d^2/2R$ is how far the Moon's curved surface drops below a flat line. The curvature matters: at 20\,km the drop is about 115\,m, which shifts the angle by about 0.3\textdegree. That is significant when the Sun is only about 1.5\textdegree{} up.
 
-\textbf{Two terrain maps.} Within 40\,km of the site the walk samples the 20\,m map; beyond that it samples the 240\,m map. The near field decides more than it seems. On the 240\,m map alone, our test site on Shackleton's rim looks sunlit about 87\% of the time. On 20\,m terrain, the same site seen from a 2\,m mast is almost always dark (0.3\%), because a crest 103\,m away and 9.5\,m higher blocks the Sun. A 10\,m mast lifts it back to about 80\%. The 240\,m map had smoothed that crest away.
+\textbf{Two terrain maps.} Within 40\,km of the site the walk samples the 20\,m map; beyond that it samples the 240\,m map. The near field decides more than it seems. On the 240\,m map alone, our test site on Shackleton's rim looks sunlit about 87\% of the time. On 20\,m terrain, the same site seen from a 2\,m mast is almost always dark (0.3\%), because a crest 103\,m away and 9.3\,m higher blocks the Sun. A 10\,m mast lifts it back to about 80\%. The 240\,m map had smoothed that crest away.
+
+\textbf{One approximation.} The walk follows a straight line on the map and treats map distance as surface distance, while the true path on the Moon is a great circle. Near the pole the difference is negligible (0.003\textdegree{} at our rim site), but it grows with distance from the pole: up to 0.05\textdegree{} for sites 5--6\textdegree{} out, more than our 0.02\textdegree{} tolerance. We will switch to great-circle sampling before the full run.
 
 \begin{figure}[ht]
 \centering
@@ -255,10 +257,10 @@ S_\text{robust}(p) = \min_{|q - p| \le 100\ \text{m}} S(q)
 \begin{enumerate}
   \item \textbf{Smooth-Moon test.} On a perfectly smooth sphere, an observer at height $h$ must see the same horizon in every direction: $H = -\arccos\!\big(R/(R+h)\big)$, about $-0.087^\circ$ for $h = 2$\,m. This also checks that $D_{\max}$ reaches past the tangent distance $\sqrt{2Rh} \approx 2.6$\,km.
   \item \textbf{Single-cone test.} One cone-shaped peak of height $P$ at distance $L$ must give exactly the angle of Equation~\eqref{eq:horizon} for $z = P$, $d = L$ in its direction, blocked at exactly $L$.
-  \item \textbf{Settings by convergence.} Make every setting finer until the answer stops changing. The rule: every site's skyline stays within 0.02\textdegree{} of the finest settings in 99\% of its directions, and its Sun and Earth visibility within 0.1 percentage point. On the 240\,m map we tested the rim site plus 500 random sites within 6\textdegree{} of the pole; on 20\,m terrain, the rim site plus 150 random sites within 13\,km of the pole. Results:
+  \item \textbf{Settings by convergence.} Make every setting finer until the answer stops changing. The rule: every site's skyline stays within 0.02\textdegree{} of the finest settings in 99\% of its directions. Each finest setting lies beyond the value we use: 300\,km, 11{,}520 directions, step factor 0.00025, and 60\,km of 20\,m terrain. On the 240\,m map we tested the rim site plus 500 random sites within 5\textdegree{} of the pole (300\,km rays from farther out leave the map); on 20\,m terrain, the rim site plus 150 random sites within 13\,km of the pole. Results:
   \begin{itemize}
-    \item Look-out distance $D_{\max} = 250$\,km. At 200\,km, whole sectors of some sites are still 0.49\textdegree{} off; beyond 250\,km nothing changes.
-    \item 1{,}440 directions. With 360 directions, the worst site is 0.058\textdegree{} off.
+    \item Look-out distance $D_{\max} = 250$\,km. At 200\,km the worst site is still 0.68\textdegree{} off in 99\% of its directions; 250\,km and 300\,km give exactly the same skylines.
+    \item 1{,}440 directions. With 360 directions, the worst site is 0.066\textdegree{} off.
     \item Step factor 0.002: far from the site, each step is 0.2\% of the distance.
     \item 20\,m terrain out to 40\,km. At 20\,km, sectors are 0.044\textdegree{} off.
   \end{itemize}

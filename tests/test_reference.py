@@ -9,6 +9,7 @@ from horizon.terrain import single
 PIXEL = 20.0
 N = 2001
 C = N // 2  # site at the centre
+RUN = dict(n_az=1440, kappa=0.001)  # 10 m steps out to 10 km, so the peaks at 10 km are sampled exactly
 
 
 def centred(height):
@@ -22,7 +23,7 @@ def exact_angle(peak, distance):
 
 
 def test_smooth_moon_dips_equally_everywhere():
-    H, D, ok = horizon_profile(centred(np.zeros((N, N))), 0.0, 0.0, mast=2.0, d_max=15_000)
+    H, D, ok = horizon_profile(centred(np.zeros((N, N))), 0.0, 0.0, mast=2.0, d_max=15_000, **RUN)
     expected = -np.degrees(np.arccos(R / (R + 2.0)))  # -0.0869 deg
     assert np.allclose(H, expected, atol=1e-4)
     assert abs(np.median(D) - np.sqrt(2 * R * 2.0)) < 50  # blocked at the tangent distance
@@ -31,23 +32,23 @@ def test_smooth_moon_dips_equally_everywhere():
 
 def test_single_cone_exact_angle_and_distance():
     dem = cone(distance_grid(N, PIXEL, C, C + 500), peak=1000.0, base_radius=3000.0)  # 10 km along +x
-    H, D, ok = horizon_profile(centred(dem), 0.0, 0.0, mast=0.0, d_max=15_000)
+    H, D, ok = horizon_profile(centred(dem), 0.0, 0.0, mast=0.0, d_max=15_000, **RUN)
     assert abs(H[0] - exact_angle(1000.0, 10_000.0)) < 1e-6
     assert D[0] == 10_000.0
 
 
 def test_ring_crater_same_in_every_direction():
     dem = ring(distance_grid(N, PIXEL, C, C), peak=1000.0, radius=10_000.0, half_width=3000.0)
-    H, D, ok = horizon_profile(centred(dem), 0.0, 0.0, mast=0.0, d_max=15_000)
+    H, D, ok = horizon_profile(centred(dem), 0.0, 0.0, mast=0.0, d_max=15_000, **RUN)
     # bilinear interpolation shaves sharp crests between grid points: up to ~0.017 deg here
     assert np.abs(H - exact_angle(1000.0, 10_000.0)).max() < 0.02
 
 
 def test_ray_leaving_the_map_is_flagged():
-    H, D, ok = horizon_profile(centred(np.zeros((201, 201))), 0.0, 0.0, mast=2.0, d_max=15_000)
+    H, D, ok = horizon_profile(centred(np.zeros((201, 201))), 0.0, 0.0, mast=2.0, d_max=15_000, **RUN)
     assert not ok.any()
 
 
 def test_site_off_the_map_fails_fast():
     with pytest.raises(ValueError, match="off the map"):
-        horizon_profile(centred(np.zeros((201, 201))), 8000.0, 0.0, mast=2.0, d_max=1_000)  # 400 px east
+        horizon_profile(centred(np.zeros((201, 201))), 8000.0, 0.0, mast=2.0, d_max=1_000, **RUN)  # 400 px east

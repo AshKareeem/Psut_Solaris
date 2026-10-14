@@ -3,7 +3,7 @@ import numpy as np
 R = 1_737_400.0  # m, radius of the LOLA reference sphere
 
 
-def step_schedule(pixel, d_max, kappa=0.001):
+def step_schedule(pixel, d_max, kappa):
     """Distances along a ray: half-pixel steps near the site, steps ~ kappa*d far away."""
     d = [pixel / 2]
     while d[-1] < d_max:
@@ -25,7 +25,7 @@ def bilinear(dem, col, row):
     return np.where(ok, z, np.nan)
 
 
-def horizon_profile(terrain, x0, y0, mast, d_max, n_az=1440, kappa=0.001):
+def horizon_profile(terrain, x0, y0, mast, d_max, n_az, kappa):
     """Horizon elevation H (deg), blocker distance (m) and completeness flag for one site at map (x0, y0) metres."""
     theta = np.arange(n_az) * (2 * np.pi / n_az)        # from map +x, counterclockwise
     d = step_schedule(terrain.levels[0].pixel, d_max, kappa)

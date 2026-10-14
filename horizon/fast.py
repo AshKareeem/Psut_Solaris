@@ -16,7 +16,7 @@ from numba import njit, prange
 from horizon.reference import R, bilinear, step_schedule
 
 
-def horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az=1440, kappa=0.001):
+def horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az, kappa):
     """Horizon for many sites at once.
 
     terrain     horizon.terrain.Terrain (one map, or fine terrain near the sites and a coarse map beyond)

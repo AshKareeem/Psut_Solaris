@@ -72,5 +72,5 @@ def test_longitude_0_is_map_up_and_90E_is_map_right(tmp_path):
         row, col = dem.latlon_to_rowcol(-90 + np.degrees(10_000 / R), lon)  # 10 km from the pole
         heights = cone(distance_grid(2001, 20.0, row, col), peak=1000.0, base_radius=3000.0)
         grid = PolarDEM(height=heights, pixel=20.0, pole_row=1000.0, pole_col=1000.0)
-        H, _, _ = horizon_profile(single(grid), 0.0, 0.0, mast=0.0, d_max=15_000, n_az=360)  # site at the pole
+        H, _, _ = horizon_profile(single(grid), 0.0, 0.0, mast=0.0, d_max=15_000, n_az=360, kappa=0.001)  # site at the pole
         assert np.argmax(H) == expected_theta

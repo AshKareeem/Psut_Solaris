@@ -3,15 +3,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from horizon import D_FINE, D_MAX, KAPPA, N_AZ
 from horizon.dem import PolarDEM, latlon_to_xy, read_polar_dem
 from horizon.fast import horizon_profiles_fast
 from horizon.reference import horizon_profile
+from horizon.sites import RIM_SITE
 from horizon.synthetic import bowl_crater, cone, distance_grid
-from horizon.terrain import multires, single
+from horizon.terrain import fine_bounds, multires, single
 
 PIXEL = 20.0
 N = 1501
 LOLA = Path(__file__).resolve().parents[1] / "data" / "ldem_75s_240m.lbl"
+LOLA_20M = LOLA.with_name("ldem_875s_20m.lbl")
 
 
 def terrain():
@@ -85,12 +88,13 @@ def test_fine_terrain_that_does_not_reach_far_enough_fails_fast():
     fine = PolarDEM(height=terrain()[600:900, 600:900], pixel=PIXEL, pole_row=150.0, pole_col=150.0)  # +-3 km
     coarse = block_mean(grid(terrain()), 4)
     with pytest.raises(ValueError, match=r"the 20 m terrain does not reach 5.0 km"):
-        horizon_profiles_fast(multires(fine, coarse, 5000.0), np.array([0.0]), np.array([0.0]), 2.0, 12_000)
+        horizon_profiles_fast(multires(fine, coarse, 5000.0), np.array([0.0]), np.array([0.0]), 2.0, 12_000, 720, 0.002)
 
 
 def test_fast_site_off_the_map_fails_fast():
     with pytest.raises(ValueError, match=r"sites \[1\] are off the map"):
-        horizon_profiles_fast(single(grid(terrain())), *sites([750.0, 750.0], [750.0, 5000.0]), mast=2.0, d_max=1_000)
+        horizon_profiles_fast(single(grid(terrain())), *sites([750.0, 750.0], [750.0, 5000.0]), mast=2.0, d_max=1_000,
+                              n_az=360, kappa=0.002)
 
 
 @pytest.mark.skipif(not LOLA.exists(), reason="needs data/ldem_75s_240m.lbl")
@@ -98,3 +102,11 @@ def test_fast_matches_reference_on_lola():
     """Shackleton rim, Shackleton floor and a site 1.5 deg from the pole, on real 240 m terrain."""
     xs, ys = latlon_to_xy(np.array([-89.779, -89.67, -88.5]), np.array([-155.73, 129.78, 45.0]))
     assert_matches_reference(single(read_polar_dem(LOLA)), xs, ys, mast=2.0, d_max=150_000, n_az=720, kappa=0.002)
+
+
+@pytest.mark.skipif(not (LOLA.exists() and LOLA_20M.exists()), reason="needs data/ldem_75s_240m and ldem_875s_20m")
+def test_fast_matches_reference_on_lola_20m_and_240m():
+    """Shackleton rim and floor on 20 m terrain within D_FINE and the 240 m map beyond, at the final settings."""
+    xs, ys = latlon_to_xy(np.array([RIM_SITE[0], -89.67]), np.array([RIM_SITE[1], 129.78]))
+    terrain = multires(read_polar_dem(LOLA_20M, fine_bounds(xs, ys, D_FINE)), read_polar_dem(LOLA), D_FINE)
+    assert_matches_reference(terrain, xs, ys, mast=2.0, d_max=D_MAX, n_az=N_AZ, kappa=KAPPA)
