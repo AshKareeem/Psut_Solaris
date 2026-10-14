@@ -62,7 +62,7 @@ python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --ou
 - **Left panel:** Shackleton is an obvious round crater about 21 km wide, right next to the pole. If the marker isn't on it, the coordinate conversion is wrong. Stop and report.
 - **Floor:** the skyline is roughly 15–25° all around, so the Sun never clears it. Shackleton's floor is known to be permanently shadowed, and your engine should agree.
 - **Rim:** the skyline is low (near 0° or below) in most directions, so the Sun clears it often.
-- **No warning** that rays left the map. The 75°S map reaches about 455 km from the pole.
+- **No warning** that rays left the map. The 75°S map (3,812 × 3,812 pixels) reaches 457.3 km from the pole along its axes, so 250 km rays stay on it for every site within 6.8° of the pole.
 
 ## Part 2b: compare with NASA's published maps
 
