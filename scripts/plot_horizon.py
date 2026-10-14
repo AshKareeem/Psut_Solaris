@@ -67,21 +67,23 @@ def summarize(H, theta, ok, lat, lon, ground, mast):
         print(f"WARNING: {np.sum(~ok)} rays left the map before full range; extend the map or lower --dmax")
 
 
-def plot(dem, row, col, H, D, theta, title, out):
+def plot(dem, x, y, H, D, theta, title, out):
+    """dem is the finest terrain level; the left panel spans twice the median blocker distance (1-40 km)."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5.6), gridspec_kw={"width_ratios": [1, 1.7]})
 
-    half = int(40_000 / dem.pixel)  # 40 km around the site
-    r0, c0 = int(round(row)), int(round(col))
+    view = float(np.clip(2 * np.median(D), 1_000, 40_000))  # m: close enough to see what blocks the sky
+    half = int(view / dem.pixel)
+    r0, c0 = (int(round(float(v))) for v in dem.xy_to_rowcol(x, y))
     crop = dem.height[max(r0 - half, 0):r0 + half, max(c0 - half, 0):c0 + half]
     ext = [-(c0 - max(c0 - half, 0)) * dem.pixel / 1e3, (min(c0 + half, dem.height.shape[1]) - c0) * dem.pixel / 1e3,
            -(min(r0 + half, dem.height.shape[0]) - r0) * dem.pixel / 1e3, (r0 - max(r0 - half, 0)) * dem.pixel / 1e3]
     im = ax1.imshow(crop, cmap="gray", extent=ext)
     fig.colorbar(im, ax=ax1, label="height (m)", shrink=0.8)
     bx, by = D * np.cos(np.radians(theta)) / 1e3, D * np.sin(np.radians(theta)) / 1e3
-    near = (np.abs(bx) < 40) & (np.abs(by) < 40)
+    near = (np.abs(bx) < view / 1e3) & (np.abs(by) < view / 1e3)
     ax1.scatter(bx[near], by[near], s=2, c="tab:orange", label="terrain forming the skyline")
     ax1.plot(0, 0, "r+", ms=14, mew=2, label="site")
-    ax1.set(xlabel="km (map x)", ylabel="km (map y, toward longitude 0)", title="Terrain around the site")
+    ax1.set(xlabel="km (map x)", ylabel="km (map y, toward longitude 0)", title=f"Terrain around the site ({dem.pixel:g} m map)")
     ax1.legend(loc="lower left", fontsize=8)
 
     low = min(-8.0, H.min() - 1)
@@ -91,7 +93,7 @@ def plot(dem, row, col, H, D, theta, title, out):
                                 color="tab:blue", alpha=0.3, label="Earth's zone (approx.)"))
     ax2.set(xlim=(0, 360), ylim=(low, max(10.0, H.max() + 2)), xticks=range(0, 361, 45),
             xlabel="direction θ (deg from map +x, counterclockwise)", ylabel="elevation (deg)", title=title)
-    ax2.legend(loc="upper right", fontsize=8)
+    ax2.legend(loc="lower right", fontsize=8)
     fig.tight_layout()
     fig.savefig(out, dpi=130)
     print(f"saved {out}")
@@ -137,7 +139,7 @@ def main():
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     name = args.site or f"{lat:.2f}, {lon:.2f}"
     source = "synthetic" if args.synthetic else f"LOLA {near.pixel:g} m + {dem.pixel:g} m" if args.fine else "LOLA"
-    plot(dem, row, col, H, D, theta, f"Skyline: {name} ({source})", args.out)
+    plot(near, x, y, H, D, theta, f"Skyline: {name} ({source})", args.out)
 
 
 if __name__ == "__main__":

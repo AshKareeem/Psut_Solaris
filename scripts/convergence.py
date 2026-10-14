@@ -24,12 +24,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from horizon.dem import latlon_to_xy, read_polar_dem, xy_to_latlon  # noqa: E402
+from horizon.dem import latlon_to_xy, read_polar_dem  # noqa: E402
 from horizon.fast import horizon_profiles_fast  # noqa: E402
 from horizon.reference import step_schedule  # noqa: E402
 from horizon.sites import RIM_SITE, random_sites  # noqa: E402
 from horizon.terrain import fine_bounds, multires, single  # noqa: E402
-from scripts.estimate_visibility import earth_fraction, sun_fraction, tilt  # noqa: E402
+from scripts.estimate_visibility import visibility  # noqa: E402
 
 D_MAX = (100e3, 150e3, 200e3, 250e3)        # m
 D_FINE = (5e3, 10e3, 20e3, 40e3, 60e3)      # m, with --fine
@@ -44,14 +44,6 @@ def between_rays(H, every):
     lo, f = j // every, (j % every) / every
     coarse = H[:, ::every]
     return coarse[:, lo] * (1 - f) + coarse[:, (lo + 1) % coarse.shape[1]] * f
-
-
-def visibility(H, xs, ys):
-    """Sun and Earth visibility of every site (scripts/estimate_visibility.py)."""
-    theta = np.arange(H.shape[1]) * 360 / H.shape[1]
-    tilts = [tilt(lat, lon) for lat, lon in zip(*xy_to_latlon(xs, ys))]
-    return (np.array([sun_fraction(h, theta, *t) for h, t in zip(H, tilts)]),
-            np.array([earth_fraction(h, theta, *t) for h, t in zip(H, tilts)]))
 
 
 def main():

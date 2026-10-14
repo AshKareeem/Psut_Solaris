@@ -13,6 +13,7 @@ horizon/__init__.py    engine settings chosen by the convergence study (N_AZ, D_
 scripts/plot_horizon.py  plot the terrain and skyline of one site
 scripts/estimate_visibility.py  rough Sun / Earth visibility from a saved skyline
 scripts/compare_pgda.py  read NASA's PGDA sunlight / Earth-visibility maps at a site
+scripts/validate_pgda.py  compare the engine with NASA's maps pixel by pixel (scatter plot)
 scripts/benchmark.py   time the fast engine on real terrain and extrapolate the full grid
 scripts/convergence.py  choose range, near-field radius, step factor and azimuth count
 scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step 0's grid exists
@@ -27,10 +28,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 31 passed
+python -m pytest -q                # expect: 33 passed
 ```
 
-Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (30 passed, 1 skipped).
+Without `data/ldem_75s_240m.lbl`, the real-terrain check in `test_fast.py` is skipped (32 passed, 1 skipped).
 
 ## Step 1: synthetic demo (no download needed)
 
@@ -84,7 +85,7 @@ python scripts/plot_horizon.py data/ldem_75s_240m.lbl --site shackleton-rim --sa
 python scripts/estimate_visibility.py out/rim.npz
 ```
 
-On the 240 m map alone: Sun **86.6%**, Earth **56.3%**. NASA: Sun 6.3% at this pixel but 85.5% at the best pixel within ±120 m; Earth 29.3% and 56.7%. The 240 m map smooths the local crest into the site, so it looks lit. With 20 m terrain near the site (Step 6) the site is dark (0.3% Sun, 36.2% Earth) and the crest 103 m away gets 85.9% and 56.3%: NASA's picture.
+On the 240 m map alone: Sun **86.6%**, Earth **56.3%**. The 240 m map smooths the local crest into the site, so it looks lit; with 20 m terrain near the site (Step 6) the site is dark (0.3% Sun, 36.2% Earth) and the crest 103 m away gets 85.9% and 56.3%. Don't compare with "NASA's value at the site": a site from the 240 m grid sits exactly on a corner of four 60 m pixels (Sun 0%, 6%, 47%, 56% here), so the script warns and prints all four. Compare pixel by pixel instead (Step 7).
 
 ## The direction convention (share with CE 2)
 
@@ -94,7 +95,7 @@ On the 240 m map alone: Sun **86.6%**, Earth **56.3%**. NASA: Sun 6.3% at this p
 
 The yellow Sun band and blue Earth zone in the plot are rough guides. Exact Sun and Earth positions come from SPICE (CE 2).
 
-## Step 3 (week 2): the fast engine
+## Step 3: the fast engine
 
 `horizon/fast.py` runs many sites in parallel with Numba and gives the same answers as the reference (H within 1e-6°, D and the completeness flag identical; `tests/test_fast.py`). Time it on real terrain:
 
@@ -136,3 +137,20 @@ Each ray samples the 20 m map out to `D_FINE` = 40 km from the site and the 240 
 - The 87.5°S map serves sites within about 36 km of the pole. For every site within 6°, download `ldem_80s_20m` (1.85 GB, ±304 km).
 - The 240 m map is the 12 × 12 block mean of the 20 m map (1.6 m RMS), so the two join without offsets.
 - No max-pyramid. Measured on real terrain, a pyramid sampled bilinearly still misses peaks and pushes 3% of directions more than 0.02° too high; direct 20 m sampling is simpler and more accurate.
+
+## Step 7: validate against NASA, pixel by pixel
+
+```
+python scripts/validate_pgda.py data/ldem_75s_240m.lbl data/ldem_875s_20m.lbl data/AVGVISIB_85S_060M_201608.TIF data/AVGVISIB_85S_060M_201608_EARTH.TIF
+```
+
+Runs the engine at the centre of each of the 10 × 10 NASA pixels around the rim site (a 600 m square), with 20 m terrain near each pixel and the 240 m map beyond, and compares our Sun and Earth estimates with NASA's values. Expect:
+
+| Mast | Sun: correlation / average difference / within 10 points | Earth: correlation / average difference |
+|---|---|---|
+| 0 m | 0.50 / −11.0 / 64% | 0.78 / −10.0 |
+| **2 m** | **0.92 / +0.4 / 93%** | 0.85 / −3.8 |
+| 5 m | 0.82 / +7.9 / 70% | 0.86 / +0.8 |
+| 10 m | 0.57 / +15.1 / 48% | 0.84 / +5.5 |
+
+At 2 m our Sun estimate matches NASA's map pixel by pixel (scatter plot in `out/validate_pgda.png`). NASA doesn't state its observer height, so that is an observed best fit, not a fact about their setup. Earth matches less well because our Earth estimate is crude; SPICE (Step 2) will replace it.

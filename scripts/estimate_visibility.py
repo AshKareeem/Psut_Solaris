@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from horizon.dem import latlon_to_xy  # noqa: E402
+from horizon.dem import latlon_to_xy, xy_to_latlon  # noqa: E402
 
 SUN_MAX = 1.54                       # deg: the Sun stays within this of level at the pole
 SUN_RADIUS = 0.27                    # deg
@@ -46,6 +46,14 @@ def earth_fraction(H, theta, c, theta_out):
     H_earth = H[np.abs(theta - EARTH_THETA) <= EARTH_HALF].max()
     lift = c * np.cos(np.radians(EARTH_THETA - theta_out))
     return 0.5 - np.arcsin(np.clip((H_earth - EARTH_RADIUS - lift) / EARTH_MAX, -1, 1)) / np.pi
+
+
+def visibility(H, xs, ys):
+    """Sun and Earth visibility of every site: H [sites, n_az], sites at map x, y (metres)."""
+    theta = np.arange(H.shape[1]) * 360 / H.shape[1]
+    tilts = [tilt(lat, lon) for lat, lon in zip(*xy_to_latlon(xs, ys))]
+    return (np.array([sun_fraction(h, theta, *t) for h, t in zip(H, tilts)]),
+            np.array([earth_fraction(h, theta, *t) for h, t in zip(H, tilts)]))
 
 
 def main():

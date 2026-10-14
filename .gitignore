@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 .venv-1/
 claudeee/
+*.zip
