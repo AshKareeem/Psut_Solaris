@@ -101,11 +101,11 @@ Stand at a site and look in direction $\theta$. Walk outward over the terrain. A
 
 \begin{equation}
 H(\theta) = \max_{d \le D_{\max}} \operatorname{atan2}\!\Big( (R+z)\cos\varphi - (R+h_0+m),\; (R+z)\sin\varphi \Big),
-\qquad \varphi = \frac{d}{R},\quad R = 1737.4\ \text{km}
+\qquad \varphi = d/R
 \label{eq:horizon}
 \end{equation}
 
-Here $z(d)$ is the terrain height at distance $d$ (interpolated between pixels), $h_0$ is the site height, $m$ is the mast height, and $\varphi$ is the angle between the site and the terrain point, seen from the Moon's centre. The formula is exact on a sphere. For intuition, it is almost the same as $\arctan\!\big((z - h_0 - m - d^2/2R)/d\big)$, where $d^2/2R$ is how far the Moon's curved surface drops below a flat line. The curvature matters: at 20\,km the drop is about 115\,m, which shifts the angle by about 0.3\textdegree. That is significant when the Sun is only about 1.5\textdegree{} up.
+Here $z(d)$ is the terrain height at distance $d$ (interpolated between pixels), $h_0$ is the site height, $m$ is the mast height, $R = 1737.4$\,km is the Moon's radius, and $\varphi$ is the angle between the site and the terrain point, seen from the Moon's centre. The formula is exact on a sphere. For intuition, it is almost the same as $\arctan\!\big((z - h_0 - m - d^2/2R)/d\big)$, where $d^2/2R$ is how far the Moon's curved surface drops below a flat line. The curvature matters: at 20\,km the drop is about 115\,m, which shifts the angle by about 0.3\textdegree. That is significant when the Sun is only about 1.5\textdegree{} up.
 
 \textbf{Two terrain maps.} Within 40\,km of the site the walk samples the 20\,m map; beyond that it samples the 240\,m map. The near field decides more than it seems. On the 240\,m map alone, our test site on Shackleton's rim looks sunlit about 87\% of the time. On 20\,m terrain, the same site seen from a 2\,m mast is almost always dark (0.3\%), because a crest 103\,m away and 9.5\,m higher blocks the Sun. A 10\,m mast lifts it back to about 80\%. The 240\,m map had smoothed that crest away.
 
@@ -182,7 +182,7 @@ These ranges double as sanity checks. If SPICE output falls outside them, someth
   \node[rotate=90] at (-1.05,1.0) {height above level};
   \node[above] at (3,2.68) {Earth's zone};
   \node[above] at (10.4,0.25) {Sun's path};
-  \node at (1.35,1.95) {Sun hidden by rim};
+  \node[align=center] at (1.35,2.15) {Sun hidden\\by rim};
 \end{tikzpicture}
 \caption{Steps 2 and 3 in one picture (illustrative terrain). Gray is the horizon profile from Step~1. The Sun moves along the flat line and is visible only where the line is above the gray. Earth stays inside the narrow band around 90\textdegree{} (toward longitude 0) and moves up and down; it is visible when it rises above the gray there.}
 \label{fig:mask}
@@ -274,6 +274,7 @@ Everyone builds against fake files in these formats from day one, so nobody wait
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.2}
+{\small\setlength{\tabcolsep}{4pt}%
 \begin{tabularx}{\textwidth}{l Y l l l}
 \toprule
 \textbf{File} & \textbf{Contents} & \textbf{Shape} & \textbf{Made by} & \textbf{Used by} \\
@@ -283,12 +284,12 @@ Everyone builds against fake files in these formats from day one, so nobody wait
 \texttt{horizon.npy} & Horizon profile per site and mast height & sites $\times$ masts $\times$ 1440 & Step 1 & Step 3 \\
 \texttt{blocker.npy} & Distance to the terrain that sets the horizon (m) & sites $\times$ masts $\times$ 1440 & Step 1 & Step 3, web app \\
 \texttt{complete.npy} & True where the walk reached $D_{\max}$ on the map & sites $\times$ masts $\times$ 1440 & Step 1 & Step 3 \\
-\texttt{horizon\_meta.json} & Number of directions, convention, masts, $D_{\max}$, step factor, $R$, terrain files & --- & Step 1 & Step 3 \\
+\texttt{horizon\_meta.json} & Settings: directions, convention, masts, $D_{\max}$, step factor, $R$, terrain files & --- & Step 1 & Step 3 \\
 \texttt{sky.npz} & Sun and Earth az/el each hour & sites $\times$ hours & Step 2 & Step 3 \\
 \texttt{visibility.npz} & $s(t)$, $e(t)$, $b(t)$ & sites $\times$ hours & Step 3 & Step 4 \\
 \texttt{results.json} & Scores, metrics, timelines of top sites & per site & Step 4 & Web app \\
 \bottomrule
-\end{tabularx}
+\end{tabularx}}
 \caption{Data contracts between steps. Read the number of directions and the mast heights from \texttt{horizon\_meta.json} instead of hard-coding them.}
 \end{table}
 
