@@ -6,3 +6,4 @@ __pycache__/
 .venv-1/
 claudeee/
 *.zip
+explain/
