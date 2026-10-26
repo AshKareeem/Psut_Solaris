@@ -5,6 +5,7 @@ Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine compu
 ## Start here (team)
 
 - **What the whole pipeline does:** `docs/landing-site-algorithm.pdf`. It covers Steps 0 to 5, the files passed between steps, and who owns what.
+- **Videos (watch these first):** [explainer videos on the horizon engine](https://drive.google.com/drive/folders/1V6i779YKPqB5drJhxOfRTtGKVn8VfF0t?usp=sharing), made with Gemini from our docs and figures. They cover the problem, the geometry, how a ray is walked and why it's fast, the terrain and accuracy studies, and the NASA validation. If a video and the docs disagree on a number, the docs are right.
 - **How the horizon engine works:** `docs/horizon-engine/`, chapter by chapter.
 - **Results, settings and their evidence:** Parts 4, 6 and 7 below, and Step 5 of the team PDF.
 - **Reading Step 1's output (CE 3):**
