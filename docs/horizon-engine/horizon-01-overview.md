@@ -2,7 +2,7 @@
 
 ## Part 1: Chapters 1–2 (the judge script and the big picture)
 
-Snapshot: commit `7e50c80`. `file:line` refers to that commit. Every number comes from the project files (`02_CLAUDE.md`, `03_code.md`, `04_data.json`, `06_README.md`, the team PDF) or from a calculation shown here.
+Snapshot: commit `4658698`. `file:line` refers to that commit. Every number comes from the project files (`02_CLAUDE.md`, `03_code.md`, `04_data.json`, `06_README.md`, the team PDF) or from a calculation shown here.
 
 ---
 
@@ -200,7 +200,7 @@ H, D, complete = horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az, kappa
 ```
 
 - It handles one mast per call, for many sites at once.
-- `n_az` and `kappa` are required arguments since `7e50c80`. Callers pass the settings from `horizon/__init__.py`.
+- `n_az` and `kappa` are required arguments since `4658698`. Callers pass the settings from `horizon/__init__.py`.
 
 ## 2.2 Why compute it once, offline, and then only look things up
 

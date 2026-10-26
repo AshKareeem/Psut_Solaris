@@ -2,7 +2,7 @@
 
 ## Part 2: Chapter 3 (geometry from first principles)
 
-Snapshot: commit `7e50c80`; `file:line` refers to that commit.
+Snapshot: commit `4658698`; `file:line` refers to that commit.
 
 Every number below comes from the project files or from a calculation shown here. Where a number is new, I computed it by running the project's own code, rebuilt from `03_code.md`. The rebuild passes the test suite exactly as the README says without data: 32 passed, 2 skipped.
 
