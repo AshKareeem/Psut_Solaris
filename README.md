@@ -6,7 +6,7 @@ Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine compu
 
 - **What the whole pipeline does:** `docs/landing-site-algorithm.pdf`. It covers Steps 0 to 5, the files passed between steps, and who owns what.
 - **How the horizon engine works:** `docs/horizon-engine/`, chapter by chapter.
-- **Results, settings and their evidence:** `CLAUDE.md`, sections 6 and 8.
+- **Results, settings and their evidence:** Parts 4, 6 and 7 below, and Step 5 of the team PDF.
 - **Reading Step 1's output (CE 3):**
   - Use `horizon.npy`, `blocker.npy` and `complete.npy`, each shaped [sites, masts, n_az].
   - Always read `n_az` (1,440) and `masts_m` (0, 2, 5, 10 m) from `horizon_meta.json`.

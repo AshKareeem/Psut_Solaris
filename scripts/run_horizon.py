@@ -1,4 +1,4 @@
-"""Step 1 batch run: the skyline of every site at every mast height, in the files Steps 3-4 read (CLAUDE.md section 5).
+"""Step 1 batch run: the skyline of every site at every mast height, in the files Steps 3-4 read (team PDF, Table 1).
 
 Writes into --out:
   horizon.npy        float32 [sites, masts, n_az]  horizon elevation H, degrees

@@ -18,7 +18,7 @@ The chapters cite source files by the names they had in the pack they were writt
 
 | Name in the chapters | File in this repo |
 |---|---|
-| `02_CLAUDE.md` | `CLAUDE.md` |
+| `02_CLAUDE.md` | Ash's project notes, which aren't in the repo; the numbers they cite are in `README.md` and the team PDF |
 | `03_code.md` | the code itself (`horizon/`, `scripts/`, `tests/`) |
 | `04_data.json` | real engine numbers at the rim site; regenerate on request |
 | `06_README.md` | `README.md` |
