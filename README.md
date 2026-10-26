@@ -2,6 +2,18 @@
 
 Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine computes a site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
 
+## Start here (team)
+
+- **What the whole pipeline does:** `docs/landing-site-algorithm.pdf`. It covers Steps 0 to 5, the files passed between steps, and who owns what.
+- **How the horizon engine works:** `docs/horizon-engine/`, chapter by chapter.
+- **Results, settings and their evidence:** `CLAUDE.md`, sections 6 and 8.
+- **Reading Step 1's output (CE 3):**
+  - Use `horizon.npy`, `blocker.npy` and `complete.npy`, each shaped [sites, masts, n_az].
+  - Always read `n_az` (1,440) and `masts_m` (0, 2, 5, 10 m) from `horizon_meta.json`.
+  - Direction j is θ = j · 360 / n_az degrees, from map +x, counterclockwise. Earth sits near θ = 90°.
+- **Converting SPICE azimuths (CE 2):** use the direction convention below, and the test that pins it.
+- **NASA data isn't in the repo** (it's too large). Download it into `data/` as described in Parts 2, 2b and 6.
+
 The parts below are the order to run things in. "Step N" always means the team pipeline (Steps 0–5 in `docs/landing-site-algorithm.pdf`); this engine is Step 1.
 
 ```
