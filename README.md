@@ -1,6 +1,30 @@
-# Horizon engine
+# LunarWindow: CLPS Lunar Mission Browser (NASA Space Apps 2026, team Psut_Solaris)
 
-Part of our CLPS Lunar Mission Browser (NASA Space Apps 2026). This engine computes a site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
+From candidate landing sites near the Moon's south pole to ranked sites with sunlight, Earth contact, battery survival, landing-error robustness, best landing dates and a mast recommendation, in `results.json` for the web app. The core is the horizon engine (Step 1), which computes each site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
+
+## The pipeline, end to end
+
+| Step | What | Code | Owner |
+|---|---|---|---|
+| 0 | candidate sites (`sites.csv`: id, x, y, lat, lon, height, slope) | IoT | IoT |
+| 1 | skylines per site and mast (great circles, 20 m + 240 m terrain) | `scripts/run_horizon.py` | Ash |
+| 2 | Sun and Earth positions every hour (NASA SPICE) | `scripts/make_sky.py`, `docs/step2-sky.md` | CE 2 |
+| 3–4 | visibility, scores, battery, best dates, mast, landing error | `scripts/score_sites.py`, `scripts/battery.py` | CE 3, IoT |
+| — | web app on `results.json` | | BIT |
+
+```
+python scripts/run_horizon.py data/ldem_75s_240m.lbl sites.csv --fine data/ldem_80s_20m.lbl --out out/run/horizon
+python scripts/make_sky.py --sites sites.csv --year 2027 --out out/run/sky.npz
+python scripts/score_sites.py --horizon out/run/horizon --sky out/run/sky.npz --sites sites.csv --out out/run/results
+python scripts/make_neighbours.py sites.csv out/run/results/results.json --out out/run/nb/sites.csv
+python scripts/run_horizon.py data/ldem_75s_240m.lbl out/run/nb/sites.csv --fine data/ldem_80s_20m.lbl --out out/run/nb
+python scripts/score_sites.py --horizon out/run/horizon --sky out/run/sky.npz --sites sites.csv --neighbours out/run/nb --out out/run/results
+```
+
+- The first two commands are independent; the last three add the landing-error check (17 points within 100 m of each top site, which then rank by their worst score there).
+- On the 400 demo sites the whole chain takes about 1.5 minutes. Sites beyond about 36 km from the pole need `ldem_80s_20m` (1.85 GB, same PDS folder as the other maps).
+- `results.json`: every per-mast number is for that site and mast's best landing date; `meta` records the settings, battery numbers and their sources.
+- **Battery numbers are provisional** (IoT): 200 W panels, 700 Wh, a 50 W load (estimate) and a 140 Wh floor (assumption) bridge only 11.2 hours without sunlight, so few sites survive a 14-day mission. Change them with `--p-load`, `--e-min` and the other battery options of `scripts/score_sites.py`.
 
 ## Start here (team)
 
@@ -33,8 +57,14 @@ scripts/benchmark.py   time the fast engine on real terrain and extrapolate the 
 scripts/convergence.py  choose range, near-field radius, step factor and azimuth count
 scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step 0's grid exists
 scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horizon_meta.json for Steps 3-4
+scripts/make_sky.py   Step 2: Sun and Earth positions per site and hour (SPICE) -> sky.npz
+scripts/validate_sky_skyfield.py  independent check of sky.npz with Skyfield
+scripts/score_sites.py  Steps 3-4: visibility, scores, battery, best dates, mast, landing error -> results.json
+scripts/battery.py    battery model (IoT)
+scripts/make_neighbours.py  points within 100 m of the top sites, for the landing-error check
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader,
-                       estimates, fast vs reference, sites.csv checks, convergence, batch run end to end
+                       estimates, fast vs reference, sites.csv checks, convergence, batch run end to end,
+                       great-circle geometry, Step 2 joint test with the engine, Steps 3-4 formulas and battery
 ```
 
 ## Setup
@@ -43,10 +73,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 34 passed
+python -m pytest -q                # expect: 93 passed
 ```
 
-Without the LOLA maps in `data/`, the two real-terrain checks in `test_fast.py` are skipped (32 passed, 2 skipped).
+Without the LOLA maps in `data/`, the two real-terrain checks in `test_fast.py` are skipped (91 passed, 2 skipped).
 
 ## Part 1: synthetic demo (no download needed)
 
