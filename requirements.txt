@@ -4,3 +4,6 @@ pytest
 rasterio
 pyproj
 numba
+spiceypy
+pandas
+skyfield
