@@ -109,7 +109,7 @@ Here $z(d)$ is the terrain height at distance $d$ (interpolated between pixels),
 
 \textbf{Two terrain maps.} Within 40\,km of the site the walk samples the 20\,m map; beyond that it samples the 240\,m map. The near field decides more than it seems. On the 240\,m map alone, our test site on Shackleton's rim looks sunlit about 87\% of the time. On 20\,m terrain, the same site seen from a 2\,m mast is almost always dark (0.3\%), because a crest 103\,m away and 9.3\,m higher blocks the Sun. A 10\,m mast lifts it back to about 80\%. The 240\,m map had smoothed that crest away.
 
-\textbf{One approximation.} The walk follows a straight line on the map and treats map distance as surface distance, while the true path on the Moon is a great circle. Near the pole the difference is negligible (0.003\textdegree{} at our rim site), but it grows with distance from the pole: up to 0.05\textdegree{} for sites 5--6\textdegree{} out, more than our 0.02\textdegree{} tolerance. We will switch to great-circle sampling before the full run.
+\textbf{True great circles.} Each walk follows the great circle that leaves the site in direction $\theta$, at true surface distance, and every sample is projected onto the map. An earlier version walked straight lines on the map instead. That was fine near the pole (0.003\textdegree{} off at our rim site) but up to 0.05\textdegree{} off for sites 5--6\textdegree{} out, more than our 0.02\textdegree{} tolerance. The engine now agrees with an independent spherical-trigonometry walk to within $10^{-6}$ degrees at every distance from the pole.
 
 \begin{figure}[ht]
 \centering

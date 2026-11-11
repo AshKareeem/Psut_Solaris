@@ -33,7 +33,10 @@ def test_smooth_moon_dips_equally_everywhere():
 def test_single_cone_exact_angle_and_distance():
     dem = cone(distance_grid(N, PIXEL, C, C + 500), peak=1000.0, base_radius=3000.0)  # 10 km along +x
     H, D, ok = horizon_profile(centred(dem), 0.0, 0.0, mast=0.0, d_max=15_000, **RUN)
-    assert abs(H[0] - exact_angle(1000.0, 10_000.0)) < 1e-6
+    # the sample 10 km along the surface lands 2R*tan(d/2R) from the pole on the map, 5.5 cm past the apex,
+    # where the cone (linear along its flank, so bilinear is exact there) is that much lower
+    past = 2 * R * np.tan(10_000.0 / (2 * R)) - 10_000.0
+    assert abs(H[0] - exact_angle(1000.0 * (1 - past / 3000.0), 10_000.0)) < 1e-6
     assert D[0] == 10_000.0
 
 

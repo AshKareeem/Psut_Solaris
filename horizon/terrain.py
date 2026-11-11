@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from horizon.reference import R
+
 
 @dataclass
 class Terrain:
@@ -19,16 +21,24 @@ class Terrain:
         level = self.level_of(d)
         for i, dem in enumerate(self.levels):
             served = d[level == i]
-            reach = served.max() if i < len(self.levels) - 1 and served.size else 0.0
+            reach = map_reach(xs, ys, served.max()) if i < len(self.levels) - 1 and served.size else 0.0
             rows, cols = dem.xy_to_rowcol(xs, ys)
             r = reach / dem.pixel
             ok = ((cols - r >= 0) & (rows - r >= 0)
                   & (cols + r < dem.height.shape[1] - 1) & (rows + r < dem.height.shape[0] - 1))
             if not ok.all():
                 bad = np.flatnonzero(~ok)[:10].tolist()
-                if reach == 0:
+                if np.all(reach == 0):
                     raise ValueError(f"sites {bad} are off the map")
-                raise ValueError(f"sites {bad}: the {dem.pixel:g} m terrain does not reach {reach / 1e3:.1f} km around them")
+                raise ValueError(f"sites {bad}: the {dem.pixel:g} m terrain does not reach "
+                                 f"{served.max() / 1e3:.1f} km around them")
+
+
+def map_reach(xs, ys, d):
+    """Largest map distance (m) of any point within surface distance d of each site. The map stretches by
+    sec^2(c/2) at angle c from the pole, and no point within d is farther from the pole than c_site + d/R."""
+    c_far = 2 * np.arctan(np.hypot(xs, ys) / (2 * R)) + d / R
+    return d / np.cos(c_far / 2) ** 2
 
 
 def single(dem):
@@ -36,10 +46,11 @@ def single(dem):
 
 
 def multires(fine, coarse, d_fine):
-    """Fine terrain out to d_fine metres from each site, the coarse map beyond."""
+    """Fine terrain out to d_fine metres (along the surface) from each site, the coarse map beyond."""
     return Terrain(levels=[fine, coarse], starts=[0.0, d_fine])
 
 
 def fine_bounds(xs, ys, d_fine):
     """Map bounds (x_min, x_max, y_min, y_max) that the fine terrain must cover for these sites."""
-    return np.min(xs) - d_fine, np.max(xs) + d_fine, np.min(ys) - d_fine, np.max(ys) + d_fine
+    reach = map_reach(xs, ys, d_fine)
+    return np.min(xs - reach), np.max(xs + reach), np.min(ys - reach), np.max(ys + reach)

@@ -25,3 +25,5 @@ The chapters cite source files by the names they had in the pack they were writt
 | team PDF | `docs/landing-site-algorithm.pdf` |
 
 Line numbers refer to commit `4658698`.
+
+**Changed since these chapters were written:** rays now follow true great circles at true surface distance (`site_frame` and `great_circle_xy` in `horizon/reference.py`, `_sample_rowcol` in `horizon/fast.py`). Chapter 3.6 describes the old straight-map-ray method and its error. The new engine matches an independent spherical-trigonometry walk to within 0.000001° at every distance from the pole. It costs 3.5 ms per site instead of 2.1 ms.

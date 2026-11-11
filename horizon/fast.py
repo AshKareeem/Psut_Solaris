@@ -6,14 +6,15 @@ Same geometry and arithmetic as the reference, plus the speed tricks of study gu
   3. exact early exit: bound(k) caps the tangent of anything at distance >= d[k] and shrinks with k,
      so once the best tangent so far reaches it, nothing farther can win
   4. sites run in parallel over all CPU cores (prange)
-Each terrain level serves its own stretch of every ray (horizon.terrain), walked in order.
+Each ray follows the true great circle leaving the site in map direction theta; every sample is projected onto
+each terrain level's map. Each level serves its own stretch of every ray (horizon.terrain), walked in order.
 """
 import math
 
 import numpy as np
 from numba import njit, prange
 
-from horizon.reference import R, bilinear, step_schedule
+from horizon.reference import R, bilinear, site_frame, step_schedule
 
 
 def horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az, kappa):
@@ -21,17 +22,17 @@ def horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az, kappa):
 
     terrain     horizon.terrain.Terrain (one map, or fine terrain near the sites and a coarse map beyond)
     xs, ys      1-D arrays of site positions, map metres, same order as the reference
-    returns     H [sites, n_az] degrees, D [sites, n_az] metres, complete [sites, n_az] bool
+    returns     H [sites, n_az] degrees, D [sites, n_az] metres along the surface, complete [sites, n_az] bool
     """
     xs, ys = np.asarray(xs, dtype=np.float64), np.asarray(ys, dtype=np.float64)
     d = step_schedule(terrain.levels[0].pixel, d_max, kappa)
     terrain.check_coverage(xs, ys, d)
     level = terrain.level_of(d)
-    rows, cols = zip(*(dem.xy_to_rowcol(xs, ys) for dem in terrain.levels))
-    site_rows, site_cols = np.stack(rows, axis=1), np.stack(cols, axis=1)  # [sites, levels]
-    z0 = bilinear(terrain.levels[0].height, site_cols[:, 0], site_rows[:, 0])
+    row0, col0 = terrain.levels[0].xy_to_rowcol(xs, ys)
+    z0 = bilinear(terrain.levels[0].height, col0, row0)
     if np.isnan(z0).any():
         raise ValueError(f"sites {np.flatnonzero(np.isnan(z0))[:10].tolist()} are on a no-data pixel")
+    p0, ex, ey = site_frame(xs, ys)                      # [sites, 3] each
 
     theta = np.arange(n_az) * (2 * np.pi / n_az)        # from map +x, counterclockwise
     phi = d / R
@@ -41,21 +42,27 @@ def horizon_profiles_fast(terrain, xs, ys, mast, d_max, n_az, kappa):
     dtype = np.result_type(*(dem.height.dtype for dem in terrain.levels))
     heights = tuple(np.ascontiguousarray(dem.height, dtype=dtype) for dem in terrain.levels)
     pixels = np.array([dem.pixel for dem in terrain.levels], dtype=np.float64)
+    pole_rows = np.array([dem.pole_row for dem in terrain.levels], dtype=np.float64)
+    pole_cols = np.array([dem.pole_col for dem in terrain.levels], dtype=np.float64)
     k_from = np.searchsorted(level, np.arange(len(terrain.levels) + 1))  # first step of each level, then the end
-    tan_best, k_best, complete = _march(heights, pixels, site_cols, site_rows, k_from, int(level[-1]), r_obs, top,
-                                        np.cos(theta), np.sin(theta), d, np.cos(phi), np.sin(phi))
+    tan_best, k_best, complete = _march(heights, pixels, pole_rows, pole_cols, p0, ex, ey, k_from, int(level[-1]),
+                                        r_obs, top, np.cos(theta), np.sin(theta), d, np.cos(phi), np.sin(phi))
     return np.degrees(np.arctan(tan_best)), d[k_best], complete
 
 
 @njit(parallel=True, cache=True)
-def _march(heights, pixels, site_cols, site_rows, k_from, last_level, r_obs, top, cos_t, sin_t, d, cos_p, sin_p):
+def _march(heights, pixels, pole_rows, pole_cols, p0, ex, ey, k_from, last_level, r_obs, top, cos_t, sin_t, d,
+           cos_p, sin_p):
     """Best tangent, its step index and the completeness flag for every site and azimuth."""
-    n_sites, n_az, n_d, n_levels = site_cols.shape[0], cos_t.size, d.size, pixels.size
+    n_sites, n_az, n_d, n_levels = p0.shape[0], cos_t.size, d.size, pixels.size
     tan_best = np.empty((n_sites, n_az))
     k_best = np.empty((n_sites, n_az), np.int64)
     complete = np.empty((n_sites, n_az), np.bool_)
     for s in prange(n_sites):
         for j in range(n_az):
+            tx = cos_t[j] * ex[s, 0] + sin_t[j] * ey[s, 0]   # true direction of map angle theta at the site
+            ty = cos_t[j] * ex[s, 1] + sin_t[j] * ey[s, 1]
+            tz = cos_t[j] * ex[s, 2] + sin_t[j] * ey[s, 2]
             best, best_k, done = -np.inf, 0, False
             for lv in range(n_levels):
                 dem, pixel = heights[lv], pixels[lv]
@@ -64,8 +71,8 @@ def _march(heights, pixels, site_cols, site_rows, k_from, last_level, r_obs, top
                     if best >= (top[s] * cos_p[k] - r_obs[s]) / (top[s] * sin_p[k]):
                         done = True                     # nothing at this distance or farther can beat best
                         break
-                    col = site_cols[s, lv] + cos_t[j] * d[k] / pixel
-                    row = site_rows[s, lv] - sin_t[j] * d[k] / pixel  # map +y = smaller row index
+                    col, row = _sample_rowcol(p0[s, 0], p0[s, 1], p0[s, 2], tx, ty, tz, cos_p[k], sin_p[k],
+                                              pole_rows[lv], pole_cols[lv], pixel)
                     if not _inside(col, row, nr, nc):
                         done = True                     # left the map for good (other levels cover their samples)
                         break
@@ -80,11 +87,23 @@ def _march(heights, pixels, site_cols, site_rows, k_from, last_level, r_obs, top
                     break
             tan_best[s, j], k_best[s, j] = best, best_k
             dem, pixel = heights[last_level], pixels[last_level]
-            col = site_cols[s, last_level] + cos_t[j] * d[n_d - 1] / pixel
-            row = site_rows[s, last_level] - sin_t[j] * d[n_d - 1] / pixel
+            col, row = _sample_rowcol(p0[s, 0], p0[s, 1], p0[s, 2], tx, ty, tz, cos_p[n_d - 1], sin_p[n_d - 1],
+                                      pole_rows[last_level], pole_cols[last_level], pixel)
             # same meaning as the reference: the last sample has valid terrain, whatever the early exit did
             complete[s, j] = _inside(col, row, dem.shape[0], dem.shape[1]) and not math.isnan(_interp(dem, col, row))
     return tan_best, k_best, complete
+
+
+@njit(cache=True)
+def _sample_rowcol(p0x, p0y, p0z, tx, ty, tz, cos_p, sin_p, pole_row, pole_col, pixel):
+    """Map column and row of a great-circle sample, in the same operation order as reference.great_circle_xy
+    followed by PolarDEM.xy_to_rowcol."""
+    px = p0x * cos_p + tx * sin_p
+    py = p0y * cos_p + ty * sin_p
+    pz = p0z * cos_p + tz * sin_p
+    f = 2 * R / (1 - pz)
+    x, y = py * f, px * f
+    return pole_col + x / pixel, pole_row - y / pixel
 
 
 @njit(cache=True)
