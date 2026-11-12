@@ -1,5 +1,5 @@
-data/
-out/
+/data/
+/out/
 __pycache__/
 .pytest_cache/
 .venv/
@@ -10,3 +10,5 @@ explain/
 .claude/
 CLAUDE.md
 Team_Work/
+Council opinion.md
+Guidelines_and_Instructions/

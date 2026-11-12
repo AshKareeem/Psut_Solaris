@@ -1,23 +1,35 @@
-"""Steps 3-4 (CE 3): visibility, scores, battery survival, best landing dates, mast recommendation and landing-error
-robustness, written as visibility.npz, dates.npz and results.json (the web app's input).
+"""Steps 3-4 (CE 3): visibility, safe landing dates, battery survival, mast recommendation, ranking and
+landing-error robustness. Writes visibility.npz, dates.npz, results.json (summary and ranking for every site) and
+sites/<id>.json for every top site (scripts/site_report.py: skyline, hourly tracks, events, verdict).
 
-Step 3, for every site, mast and hour (team PDF, Step 3):
+Step 3, for every site, mast and hour (team PDF, Step 3; scripts/events.py):
   s = clamp((sun_el - H(sun_az) + r_sun) / (2 r_sun), 0, 1)     visible fraction of the Sun
-  e = earth_el + r_earth > H(earth_az)                          any part of Earth visible (NASA's rule)
+  e = earth_el + r_earth > H(earth_az) + earth_margin           any part of Earth visible (NASA's rule); the
+                                                                 margin models an antenna mask (default 0)
   b = (s > 0.5) and e                                           power and Earth contact together
   H is interpolated between neighbouring directions; r_sun and r_earth are that hour's disc radii (sky.npz).
-Step 4, for a mission of --days starting at 00:00 UTC on every day of the sky file:
-  f_sun, f_earth, f_both = share of hours with s > 0.5, with e, with b; gap = longest run of hours without s > 0.5
-  score = w_sun f_sun + w_earth f_earth + w_both f_both - w_gap gap / mission hours
-  battery (scripts/battery.py): the lander starts full and survives if it never drops below e_min
-  best date (per site and mast): the highest score among dates it survives, or the highest score if it never does.
-    Every number results.json gives for a site and mast is for that date.
-  recommended mast: the shortest mast whose best score is within --good-enough of the best mast's
-  ranked sites: within 6 deg of the pole, slope under 10 deg, every ray complete, and surviving at some mast;
-    ordered by best score, or, with --neighbours, by the worst score within 100 m at the recommended mast
-Landing error (--neighbours): skylines at points within 100 m of the top sites (scripts/make_neighbours.py, then
+Step 4, for a mission of --days starting at 00:00 UTC on every day of the sky file. No weighted score: every
+number is a physical quantity.
+  touchdown      more than half the Sun visible and Earth in view in the landing hour (power and a link at landing)
+  survives       the battery (scripts/battery.py, sun-tracking array: an upper bound) never drops below e_min
+  safe date      touchdown, Earth in view for at least --min-dte-share of the mission (NASA: direct-with-Earth, no
+                 relay), and survives; safe_landing_days counts them ("launch delays ... alternative dates")
+  f_sun, f_earth, f_both   share of hours with s > 0.5, with e, with b
+  longest_dark_h longest run of hours without s > 0.5: the cold soak; bridge_Wh = longest_dark_h * p_load
+  best date      per site and mast: the safe date with the most hours of power and Earth together, then the shortest
+                 darkness, then the earliest. A mast with no safe date has no best date. sites/<id>.json shows the
+                 recommended mast's best date (within 100 m when that check ran).
+  recommended mast  the shortest mast with at least one safe landing date (information only)
+  ranking        one list per mast (top_sites_by_mast, site ids): sites within 6 deg of the pole, slope under 10 deg,
+                 every ray complete at that mast and at least one safe date; most safe landing days first, then
+                 the least bridge_Wh, then sites.csv order. The user picks the lander's mast (default 2 m).
+  within 100 m   (--neighbours) a lander aimed at a site comes down anywhere within 100 m (NASA's landing accuracy),
+                 so a date is safe for the site only if it is safe at every point there. Where that was checked, the
+                 lists count those days instead, and a site with none leaves that mast's list;
+                 recommended_mast_100m_m is the shortest mast with such a date. On the demo grid this matters: no
+                 ranked site keeps a safe date within 100 m at 0 m.
+Landing error (--neighbours): skylines at points within 100 m of the ranked sites (scripts/make_neighbours.py, then
 scripts/run_horizon.py). Each point uses its parent's sky, since 100 m moves the Sun and Earth by only 0.003 deg.
-worst_score_100m is the lowest score among those points, for the parent's best date at that mast.
 
 Usage:
   python scripts/score_sites.py --horizon out/run --sky out/sky.npz --sites sites.csv --out out/results
@@ -35,9 +47,12 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.battery import Battery, levels, simulate  # noqa: E402
+from scripts.battery import Battery, simulate  # noqa: E402
+from scripts.events import earth_clearance, longest_run, sun_clearance, sun_fraction  # noqa: E402
+from scripts.site_report import site_report  # noqa: E402
 
 GATE_LAT, GATE_SLOPE = -84.0, 10.0   # NASA's Artemis III reference: within 6 deg of the pole, slope under 10 deg
+TRACK = ("sun_az", "sun_el", "earth_az", "earth_el")
 
 
 def read_csv(path):
@@ -65,25 +80,14 @@ def load(horizon_dir, sky_path, sites_path):
     return meta, H, D, ok, sky, sites
 
 
-def skyline_at(H, az):
-    """H [sites, n_az] interpolated between neighbouring directions at az [sites, hours] (degrees)."""
-    n_az = H.shape[1]
-    pos = (az % 360) * (n_az / 360)
-    j0 = np.floor(pos).astype(int) % n_az
-    frac = pos - np.floor(pos)
-    h0 = np.take_along_axis(H, j0, axis=1)
-    h1 = np.take_along_axis(H, (j0 + 1) % n_az, axis=1)
-    return h0 * (1 - frac) + h1 * frac
-
-
-def visibility(H, sky):
+def visibility(H, sky, earth_margin):
     """s float32, e bool, b bool, each [sites, masts, hours]."""
-    r_sun, r_earth = sky["sun_radius_deg"][None, :], sky["earth_radius_deg"][None, :]
     shape = (H.shape[0], H.shape[1], sky["sun_az"].shape[1])
     s, e = np.empty(shape, np.float32), np.empty(shape, bool)
     for m in range(H.shape[1]):
-        s[:, m] = np.clip((sky["sun_el"] - skyline_at(H[:, m], sky["sun_az"]) + r_sun) / (2 * r_sun), 0, 1)
-        e[:, m] = sky["earth_el"] + r_earth > skyline_at(H[:, m], sky["earth_az"])
+        s[:, m] = sun_fraction(sun_clearance(H[:, m], sky["sun_az"], sky["sun_el"]), sky["sun_radius_deg"][None, :])
+        e[:, m] = earth_clearance(H[:, m], sky["earth_az"], sky["earth_el"], sky["earth_radius_deg"][None, :],
+                                  earth_margin) > 0
     return s, e, (s > 0.5) & e
 
 
@@ -92,65 +96,53 @@ def windows(a, hours):
     return sliding_window_view(a, hours, axis=-1)[..., ::24, :]
 
 
-def longest_run(flags):
-    """Longest run of True along the last axis."""
-    run = np.zeros(flags.shape[:-1], np.int32)
-    best = run.copy()
-    for h in range(flags.shape[-1]):
-        run = np.where(flags[..., h], run + 1, 0)
-        best = np.maximum(best, run)
-    return best
-
-
-def date_metrics(s, e, b, hours, weights, battery):
+def date_metrics(s, e, b, hours, battery, min_dte_share):
     """Every metric for every site, mast and landing date: dict of arrays [sites, masts, dates]."""
-    out = {k: [] for k in ("f_sun", "f_earth", "f_both", "gap_h", "score", "lowest_Wh", "death_h")}
+    out = {k: [] for k in ("n_sun", "n_earth", "n_both", "gap_h", "lowest_Wh", "death_h", "touchdown")}
     for m in range(s.shape[1]):
         sw, ew, bw = windows(s[:, m], hours), windows(e[:, m], hours), windows(b[:, m], hours)
         lit = sw > 0.5
-        f_sun, f_earth, f_both = lit.mean(-1), ew.mean(-1), bw.mean(-1)
-        gap = longest_run(~lit)
-        w = weights
-        score = w["sun"] * f_sun + w["earth"] * f_earth + w["both"] * f_both - w["gap"] * gap / hours
         lowest, death = simulate(sw, battery)
-        for k, v in zip(out, (f_sun, f_earth, f_both, gap, score, lowest, death)):
+        for k, v in zip(out, (lit.sum(-1), ew.sum(-1), bw.sum(-1), longest_run(~lit), lowest, death, bw[..., 0])):
             out[k].append(v)
-    return {k: np.stack(v, axis=1) for k, v in out.items()}
+    met = {k: np.stack(v, axis=1) for k, v in out.items()}
+    met["safe"] = met["touchdown"] & (met["n_earth"] >= min_dte_share * hours) & (met["death_h"] < 0)
+    return met
 
 
-def best_dates(score, survives, top_n):
-    """Indices [top_n, sites, masts] of the best dates: surviving dates first, then by score."""
-    key = np.where(survives, score, score - 1e6)      # any surviving date beats every failing one
-    return np.argsort(-key, axis=-1)[..., :top_n].transpose(2, 0, 1)
+def best_dates(met, hours, top_n):
+    """Indices [top_n, sites, masts] of the best dates: safe dates first, most hours of power and Earth together,
+    then the shortest darkness, then the earliest. Entries past a site's safe dates are not safe (check met['safe'])."""
+    key = np.where(met["safe"], met["n_both"] * (hours + 1) + (hours - met["gap_h"]), -1)
+    return np.argsort(-key, axis=-1, kind="stable")[..., :top_n].transpose(2, 0, 1)
 
 
-def recommended_mast(best_score, best_survives, masts, good_enough):
-    """Shortest mast within good_enough of the best mast's best score, among masts that survive; NaN if none."""
-    rec = np.full(best_score.shape[0], np.nan)
-    for i in range(best_score.shape[0]):
-        ok = best_survives[i]
-        if ok.any():
-            target = best_score[i, ok].max() - good_enough
-            rec[i] = next(m for m, sc, k in zip(masts, best_score[i], ok) if k and sc >= target)
-    return rec
+def recommended_mast(n_safe, masts):
+    """Shortest mast with at least one safe landing date; NaN if none."""
+    has = n_safe > 0
+    return np.where(has.any(axis=1), np.asarray(masts)[has.argmax(axis=1)], np.nan)
 
 
-def neighbour_worst(nb_dir, sky, metric_args, parent_of, best_k, n_sites):
-    """Worst score and all-survive over each parent's points within 100 m, at the parent's best date per mast."""
+def ranking(rows, days, bridge_Wh):
+    """Site rows ordered by days (more first), then battery needed to bridge the longest darkness (less first),
+    then sites.csv order."""
+    rows = np.asarray(rows, int)
+    return rows[np.lexsort((rows, bridge_Wh[rows], -days[rows]))].tolist()
+
+
+def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe):
+    """Landing dates safe at the parent and at every point within 100 m [sites, masts, dates] (False for sites not
+    checked), whether every point's rays are complete [sites, masts], and the points per site."""
     H_nb, ok_nb = np.load(Path(nb_dir) / "horizon.npy"), np.load(Path(nb_dir) / "complete.npy")
-    nb_sky = {k: (v[parent_of] if k in ("sun_az", "sun_el", "earth_az", "earth_el") else v) for k, v in sky.items()}
-    s, e, b = visibility(H_nb, nb_sky)
-    met = date_metrics(s, e, b, *metric_args)
-    k = best_k[parent_of]                                   # [points, masts]: the parent's best date
-    pick = lambda a: np.take_along_axis(a, k[..., None], axis=-1)[..., 0]
-    score, survives = pick(met["score"]), pick(met["death_h"]) < 0
-    worst = np.full((n_sites, H_nb.shape[1]), np.nan)
-    all_ok = np.zeros((n_sites, H_nb.shape[1]), bool)
+    nb_sky = {k: (v[parent_of] if k in TRACK else v) for k, v in sky.items()}
+    safe = date_metrics(*visibility(H_nb, nb_sky, earth_margin), hours, battery, min_dte_share)["safe"]
+    safe_100m = np.zeros_like(parent_safe)
+    complete = np.zeros(parent_safe.shape[:2], bool)
     for p in np.unique(parent_of):
         rows = parent_of == p
-        worst[p] = score[rows].min(axis=0)
-        all_ok[p] = survives[rows].all(axis=0) & ok_nb[rows].all(axis=(0, 2))
-    return worst, all_ok, np.bincount(parent_of, minlength=n_sites)
+        safe_100m[p] = parent_safe[p] & safe[rows].all(axis=0)
+        complete[p] = ok_nb[rows].all(axis=(0, 2))
+    return safe_100m, complete, np.bincount(parent_of, minlength=parent_safe.shape[0])
 
 
 def r(x, n=3):
@@ -162,13 +154,14 @@ def main():
     ap.add_argument("--horizon", required=True, help="Step 1 folder (horizon.npy, blocker.npy, complete.npy, meta)")
     ap.add_argument("--sky", required=True, help="Step 2 sky.npz (hourly, from scripts/make_sky.py)")
     ap.add_argument("--sites", required=True, help="the sites.csv both steps used")
-    ap.add_argument("--neighbours", help="Step 1 folder for the points within 100 m of the top sites")
+    ap.add_argument("--neighbours", help="Step 1 folder for the points within 100 m of the ranked sites")
     ap.add_argument("--out", default="out/results")
     ap.add_argument("--days", type=int, default=14, help="mission length")
-    ap.add_argument("--weights", type=float, nargs=4, default=[0.30, 0.20, 0.35, 0.15],
-                    metavar=("SUN", "EARTH", "BOTH", "GAP"))
-    ap.add_argument("--good-enough", type=float, default=0.05, help="mast recommendation tolerance on the score")
-    ap.add_argument("--top", type=int, default=20, help="sites with hour-by-hour timelines")
+    ap.add_argument("--min-dte-share", type=float, default=0.5,
+                    help="share of mission hours Earth must be in view for a safe date (no relay)")
+    ap.add_argument("--earth-margin", type=float, default=0.0,
+                    help="degrees Earth must clear the skyline by (antenna mask); 0 = NASA's any-part-visible rule")
+    ap.add_argument("--top", type=int, default=20, help="sites ranked per mast, with a sites/<id>.json each")
     ap.add_argument("--dates", type=int, default=3, help="best landing dates listed per site and mast")
     for name, default in vars(Battery()).items():
         ap.add_argument(f"--{name.replace('_', '-')}", type=float, default=default, help=f"battery {name}")
@@ -176,95 +169,125 @@ def main():
 
     meta, H, D, ok, sky, sites = load(a.horizon, a.sky, a.sites)
     battery = Battery(a.e_max, a.e_min, a.p_panel, a.p_load, a.dt)
-    weights = dict(zip(("sun", "earth", "both", "gap"), a.weights))
     masts, hours, n_sites = [float(m) for m in meta["masts_m"]], a.days * 24, H.shape[0]
+    ids = sites["id"].astype(str)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    s, e, b = visibility(H, sky)
+    s, e, b = visibility(H, sky, a.earth_margin)
     np.savez_compressed(out / "visibility.npz", s=s, e=e, b=b, time_utc=sky["time_utc"], masts_m=np.array(masts))
-    met = date_metrics(s, e, b, hours, weights, battery)
-    survives = met["death_h"] < 0
+    met = date_metrics(s, e, b, hours, battery, a.min_dte_share)
+    n_safe = met["safe"].sum(-1)                                # [sites, masts]
     starts = sky["time_utc"][: s.shape[-1] - hours + 1 : 24]
-    best_k = best_dates(met["score"], survives, a.dates)      # [dates, sites, masts]
-    at_best = {k: np.take_along_axis(v, best_k[0][..., None], axis=-1)[..., 0] for k, v in met.items()}
-    best_survives = at_best["death_h"] < 0
-    rec = recommended_mast(at_best["score"], best_survives, masts, a.good_enough)
-    np.savez_compressed(out / "dates.npz", start_utc=starts, score=met["score"].astype(np.float32),
-                        survives=survives, masts_m=np.array(masts))
+    order = best_dates(met, hours, a.dates)                     # [dates, sites, masts]
+    at_best = {k: np.take_along_axis(v, order[0][..., None], axis=-1)[..., 0] for k, v in met.items()}
+    bridge_Wh = battery.energy_to_bridge(at_best["gap_h"])      # [sites, masts], at the best date
+    survived_h = np.where(met["death_h"] < 0, hours, met["death_h"]).max(axis=-1)   # longest any date lasts
+    rec = recommended_mast(n_safe, masts)
+    np.savez_compressed(out / "dates.npz", start_utc=starts, safe=met["safe"], touchdown=met["touchdown"],
+                        survives=met["death_h"] < 0, masts_m=np.array(masts))
 
-    lat, slope = sites["lat"].astype(float), sites["slope"].astype(float)
+    lat, lon, slope = (sites[k].astype(float) for k in ("lat", "lon", "slope"))
     passes_gates = (lat <= GATE_LAT) & (slope < GATE_SLOPE)
-    complete = ok.all(axis=2)                                  # [sites, masts]
-    rankable = passes_gates & complete.all(axis=1) & best_survives.any(axis=1)
-    overall = np.where(rankable, np.where(best_survives, at_best["score"], -np.inf).max(axis=1), -np.inf)
-    top = [int(i) for i in np.argsort(-overall)[: a.top] if np.isfinite(overall[i])]
+    complete = ok.all(axis=2)                                   # [sites, masts]
+    candidates = [np.flatnonzero(passes_gates & complete[:, m] & (n_safe[:, m] > 0)) for m in range(len(masts))]
+    by_mast = [ranking(c, n_safe[:, m], bridge_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
 
-    worst = np.full((n_sites, len(masts)), np.nan)
-    all_ok = np.zeros((n_sites, len(masts)), bool)
+    days_100m = np.full((n_sites, len(masts)), np.nan)
+    complete_100m = np.zeros((n_sites, len(masts)), bool)
     n_points = np.zeros(n_sites, int)
+    rec_100m = np.full(n_sites, np.nan)
+    order_100m = safe_100m = None
     if a.neighbours:
         nb = read_csv(Path(a.neighbours) / "sites.csv")
         parent_of = nb["parent"].astype(int)
-        worst, all_ok, n_points = neighbour_worst(a.neighbours, sky, (hours, weights, battery), parent_of,
-                                                  best_k[0], n_sites)
-        if not set(top) <= set(parent_of.tolist()):
-            raise ValueError("--neighbours does not cover every top site: re-run scripts/make_neighbours.py")
-        robust = lambda i: worst[i, masts.index(rec[i])]
-        top.sort(key=lambda i: (-robust(i), -overall[i]))    # rank by the worst score within 100 m
+        missing = {i for rows in by_mast for i in rows} - set(parent_of.tolist())
+        if missing:
+            raise ValueError(f"--neighbours does not cover ranked sites {sorted(ids[list(missing)])[:10]}: "
+                             "re-run scripts/make_neighbours.py on this results.json")
+        safe_100m, complete_100m, n_points = neighbour_safe(a.neighbours, sky, hours, battery, a.earth_margin,
+                                                            a.min_dte_share, parent_of, met["safe"])
+        checked = n_points > 0
+        days_100m = np.where(checked[:, None], safe_100m.sum(-1), np.nan)
+        order_100m = best_dates(met | {"safe": safe_100m}, hours, a.dates)
+        rec_100m = np.where(checked, recommended_mast(np.nan_to_num(days_100m), masts), np.nan)
+        key = np.where(checked[:, None], np.nan_to_num(days_100m), n_safe)
+        # a site whose dates all fail somewhere within 100 m is not safe to aim at, so it leaves that mast's list
+        candidates = [c[key[c, m] > 0] for m, c in enumerate(candidates)]
+        by_mast = [ranking(c, key[:, m], bridge_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
+    ranked = sorted({i for rows in by_mast for i in rows})
 
     results = {
         "meta": {
-            "version": 2, "sky_source": str(sky["script_version"]) + " (NASA SPICE, DE421)",
-            "battery": vars(battery) | {"bridge_hours": battery.bridge_hours(),
-                                        "sources": "IoT: p_panel Nova-C 200 W (Wikipedia); e_max 25 Ah x 28 V; "
-                                                   "p_load ESTIMATE from Odysseus; e_min ASSUMPTION 20%"},
-            "mission_days": a.days, "weights": weights, "masts_m": masts, "n_az": int(meta["n_az"]),
-            "gates": {"lat_max_deg": GATE_LAT, "slope_max_deg": GATE_SLOPE},
-            "landing_error_m": 100, "first_start": str(starts[0]), "last_start": str(starts[-1]),
-            "fields": "every per-mast number is for that site and mast's best landing date (best_dates[0])",
-            "f_sun": "share of mission hours with more than half the Sun visible",
-            "top_sites": top},
+            "version": 4, "sky_source": str(sky["script_version"]) + " (NASA SPICE, DE421)",
+            "span": {"first_start": str(starts[0])[:13], "last_start": str(starts[-1])[:13], "n_days": len(starts)},
+            "mission_days": a.days, "masts_m": masts, "default_mast_m": 2.0, "n_az": int(meta["n_az"]),
+            "min_dte_share": a.min_dte_share, "earth_margin_deg": a.earth_margin,
+            "gates": {"lat_max_deg": GATE_LAT, "slope_max_deg": GATE_SLOPE}, "landing_error_m": 100,
+            "lander": battery.profile(),
+            "definitions": {
+                "safe_landing_date": f"touchdown with more than half the Sun and Earth in view, Earth in view for at "
+                                     f"least {a.min_dte_share:.0%} of the {a.days}-day mission (no relay), and the "
+                                     f"battery never below {battery.e_min:g} Wh",
+                "ranking": "one list per mast height: most safe landing days (safe at every point within 100 m "
+                           "where that was checked; sites with none there are left out), then the least battery "
+                           "needed to bridge the longest darkness",
+                "bridge_Wh": "battery energy needed to survive the longest darkness of the best landing date, at "
+                             f"the lander's {battery.p_load:g} W load",
+                "default_mast": "2 m: the best-fit observer height when the engine is checked against NASA's maps",
+                "recommended_mast_m": "the shortest mast with at least one safe landing date (information only)",
+                "fields": "per-mast numbers are for that mast's best landing date (best_dates[0]); null if it has "
+                          "none"},
+            "top_sites_by_mast": {str(mast): ids[rows].tolist() for mast, rows in zip(masts, by_mast)}},
         "sites": []}
     for i in range(n_sites):
-        site = {"id": str(sites["id"][i]), "lat": r(lat[i], 5), "lon": r(float(sites["lon"][i]), 4),
+        site = {"id": ids[i], "lat": r(lat[i], 5), "lon": r(lon[i], 4),
                 "x_m": r(float(sites["x"][i]), 1), "y_m": r(float(sites["y"][i]), 1), "slope_deg": r(slope[i], 1),
                 "passes_gates": bool(passes_gates[i]), "recommended_mast_m": r(rec[i], 1),
-                "landing_error_points": int(n_points[i]), "masts": {}}
+                "recommended_mast_100m_m": r(rec_100m[i], 1), "landing_error_points": int(n_points[i]),
+                "detail_file": f"sites/{ids[i]}.json" if i in ranked else None, "masts": {}}
         for m, mast in enumerate(masts):
+            best = n_safe[i, m] > 0
+            pick = lambda k, f=lambda v: v: f(at_best[k][i, m]) if best else None
             site["masts"][str(mast)] = {
-                "best_dates": [{"start": str(starts[best_k[j, i, m]])[:13], "score": r(met["score"][i, m, best_k[j, i, m]])}
-                               for j in range(best_k.shape[0])],
-                "score": r(at_best["score"][i, m]), "f_sun": r(at_best["f_sun"][i, m]),
-                "f_earth": r(at_best["f_earth"][i, m]), "f_both": r(at_best["f_both"][i, m]),
-                "longest_dark_h": int(at_best["gap_h"][i, m]), "survives": bool(best_survives[i, m]),
-                "battery_lowest_Wh": r(at_best["lowest_Wh"][i, m], 1),
-                "dies_at_hour": None if best_survives[i, m] else int(at_best["death_h"][i, m]),
-                "survivable_dates": int(survives[i, m].sum()), "complete": bool(complete[i, m]),
-                "worst_score_100m": r(worst[i, m]), "survives_within_100m": bool(all_ok[i, m]) if n_points[i] else None}
-        if i in top:
-            m = masts.index(rec[i])
-            i0 = int(best_k[0, i, m]) * 24
-            hrs = slice(i0, i0 + hours)
-            site["timeline"] = {
-                "mast_m": masts[m], "start": str(starts[best_k[0, i, m]])[:13], "hours": hours,
-                "sun_fraction": [r(x, 2) for x in s[i, m, hrs]], "earth_visible": [bool(x) for x in e[i, m, hrs]],
-                "both": [bool(x) for x in b[i, m, hrs]], "battery_Wh": [r(x, 1) for x in levels(s[i, m, hrs], battery)],
-                **{k: [r(x, 2) for x in sky[k][i, hrs]] for k in ("sun_az", "sun_el", "earth_az", "earth_el")}}
-            step = H.shape[2] // 360
-            site["skyline_deg"] = {str(mast): [r(x, 2) for x in H[i, mm, ::step]] for mm, mast in enumerate(masts)}
-            site["blocker_km"] = {str(mast): [r(x / 1e3, 2) for x in D[i, mm, ::step]] for mm, mast in enumerate(masts)}
+                "safe_landing_days": int(n_safe[i, m]),
+                "safe_days_within_100m": None if not n_points[i] else int(days_100m[i, m]),
+                "best_dates": [{"start": str(starts[order[j, i, m]])[:13],
+                                "f_both": r(met["n_both"][i, m, order[j, i, m]] / hours),
+                                "longest_dark_h": int(met["gap_h"][i, m, order[j, i, m]])}
+                               for j in range(order.shape[0]) if met["safe"][i, m, order[j, i, m]]],
+                "f_sun": pick("n_sun", lambda v: r(v / hours)), "f_earth": pick("n_earth", lambda v: r(v / hours)),
+                "f_both": pick("n_both", lambda v: r(v / hours)), "longest_dark_h": pick("gap_h", int),
+                "bridge_Wh": r(bridge_Wh[i, m], 1) if best else None,
+                "battery_lowest_Wh": pick("lowest_Wh", lambda v: r(v, 1)),
+                "longest_survival_h": int(survived_h[i, m]), "complete": bool(complete[i, m]),
+                "best_dates_within_100m": None if not n_points[i] else
+                    [str(starts[order_100m[j, i, m]])[:13] for j in range(order_100m.shape[0])
+                     if safe_100m[i, m, order_100m[j, i, m]]],
+                "complete_within_100m": None if not n_points[i] else bool(complete_100m[i, m])}
         results["sites"].append(site)
     (out / "results.json").write_text(json.dumps(results))
 
+    detail = out / "sites"
+    detail.mkdir(exist_ok=True)
+    for i in ranked:                                   # at the 100 m mast and date when that check found one
+        use_100m = np.isfinite(rec_100m[i])
+        m = masts.index(rec_100m[i] if use_100m else rec[i])
+        k = int((order_100m if use_100m else order)[0, i, m]) * 24
+        track = {key: sky[key][i, k: k + hours] for key in TRACK}
+        track |= {key: sky[key][k: k + hours] for key in ("time_utc", "sun_radius_deg", "earth_radius_deg")}
+        info = {key: results["sites"][i][key] for key in ("id", "lat", "lon", "x_m", "y_m", "slope_deg")}
+        report = site_report(info, H[i, m], D[i, m], ok[i, m], track, masts[m], battery, a.earth_margin)
+        (detail / f"{info['id']}.json").write_text(json.dumps(report))
+
     print(f"{n_sites} sites x {len(masts)} masts x {len(starts)} landing dates ({a.days}-day missions) -> {out}")
-    print(f"battery bridges {battery.bridge_hours():.1f} h without sunlight")
+    print(f"safe date: touchdown in Sun and Earth, Earth in view >= {a.min_dte_share:.0%} of the mission, battery "
+          f"bridges {battery.bridge_hours():.1f} h (sun-tracking array: an upper bound)")
+    print(f"pass the gates: {passes_gates.sum()} | rays all complete: {complete.all(axis=1).sum()}")
     for m, mast in enumerate(masts):
-        print(f"  mast {mast:>4} m: survives on at least one date at {best_survives[:, m].sum()} of {n_sites} sites")
-    print(f"pass the gates: {passes_gates.sum()} | rays all complete: {complete.all(axis=1).sum()} | ranked: {rankable.sum()}")
-    print(f"top {len(top)}: {top[:10]}{' ...' if len(top) > 10 else ''}")
-    if a.neighbours:
-        print(f"landing error: {n_points.astype(bool).sum()} sites checked with up to {n_points.max()} points each")
+        head = ", ".join(f"{ids[i]} ({n_safe[i, m]}" + (f", {days_100m[i, m]:.0f} within 100 m" if n_points[i] else "")
+                         + ")" for i in by_mast[m][:3])
+        print(f"  mast {mast:>4} m: {(n_safe[:, m] > 0).sum()} of {n_sites} sites have a safe landing date; top: {head}")
 
 
 if __name__ == "__main__":

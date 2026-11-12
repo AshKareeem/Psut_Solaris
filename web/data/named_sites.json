@@ -1,0 +1,62 @@
+[
+ {
+  "id": "im1",
+  "name": "IM-1 Odysseus (Intuitive Machines)",
+  "kind": "landing_site",
+  "lat": -80.13,
+  "lon": 1.44,
+  "source": "https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/",
+  "landed_utc": "2024-02-22T23",
+  "landed_source": "https://en.wikipedia.org/wiki/IM-1 (touchdown 23:23 UTC)"
+ },
+ {
+  "id": "im2",
+  "name": "IM-2 Athena (Intuitive Machines)",
+  "kind": "landing_site",
+  "lat": -84.7906,
+  "lon": 29.1957,
+  "source": "https://lroc.im-ldi.com/images/1408",
+  "landed_utc": "2025-03-06T17",
+  "landed_source": "https://en.wikipedia.org/wiki/IM-2 (terminal descent 17:27 UTC, touchdown about 3 min later)"
+ },
+ {
+  "id": "shackleton_rim",
+  "name": "Shackleton rim (highest rim pixel of LOLA 240 m)",
+  "kind": "study_site",
+  "lat": -89.778601,
+  "lon": -155.72556,
+  "source": "computed: centre of the highest rim pixel of LDEM_75S_240M (row 1931 col 1894)",
+  "landed_utc": "",
+  "landed_source": ""
+ },
+ {
+  "id": "shackleton_crest",
+  "name": "Crest 103 m from the Shackleton rim site",
+  "kind": "study_site",
+  "lat": -89.78131485,
+  "lon": -156.25683234,
+  "source": "computed: highest LDEM_875S_20M pixel within 250 m of shackleton_rim (+9.25 m)",
+  "landed_utc": "",
+  "landed_source": ""
+ },
+ {
+  "id": "sdg_ridge",
+  "name": "Shackleton-de Gerlache ridge (NASA's brightest pixel within 30 km of the pole)",
+  "kind": "study_site",
+  "lat": -89.47485,
+  "lon": -137.44314,
+  "source": "computed: brightest pixel of NASA PGDA AVGVISIB_85S_060M_201608 within 30 km of the pole",
+  "landed_utc": "",
+  "landed_source": ""
+ },
+ {
+  "id": "apollo11",
+  "name": "Apollo 11 Tranquility Base",
+  "kind": "out_of_coverage",
+  "lat": 0.67408,
+  "lon": 23.47297,
+  "source": "https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo11info.html",
+  "landed_utc": "",
+  "landed_source": ""
+ }
+]

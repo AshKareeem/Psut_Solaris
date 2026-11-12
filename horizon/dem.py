@@ -93,6 +93,12 @@ def read_polar_dem(label_path, bounds=None):
     return PolarDEM(height=height, pixel=pixel, pole_row=center - r0, pole_col=center - c0)
 
 
+def map_half_width(label_path):
+    """Distance (m) from the pole to the centre of the map's edge pixels, read from the label alone."""
+    lbl = _read_label(Path(label_path))
+    return (_number(lbl["LINES"]) - 1) / 2 * _metres(lbl["MAP_SCALE"])
+
+
 def _window(bounds, center, pixel, n):
     """Rows [r0, r1) and columns [c0, c1) holding every pixel bilinear interpolation needs inside bounds."""
     x_min, x_max, y_min, y_max = bounds

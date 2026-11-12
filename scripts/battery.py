@@ -9,10 +9,25 @@ Default numbers (IoT, battery_v2):
   p_load  = 50 W    ESTIMATE, from Odysseus lasting 10-20 hours on battery (Reuters)
   e_min   = 140 Wh  ASSUMPTION, 20% of a full battery
 With these, a full battery bridges (e_max - e_min) / p_load = 11.2 hours without sunlight.
+
+Power is p_panel times the visible fraction of the Sun, whatever the Sun's direction: that is a sun-tracking
+array. Real polar landers carry fixed panels while the Sun circles the horizon every 29.5 days, so survival here
+is an upper bound. The headline needs no guessed panel geometry: the longest darkness (the cold soak) and the
+energy to bridge it at the user's load, energy_to_bridge(hours).
 """
 from dataclasses import dataclass
 
 import numpy as np
+
+LANDER = {
+    "name": "Nova-C class (IoT estimate)",
+    "model": "sun-tracking array: power = p_panel x visible Sun fraction, whatever the Sun's direction, so survival "
+             "is an upper bound for fixed panels",
+    "sources": {"p_panel": "Nova-C max solar power, 200 W (Wikipedia)",
+                "e_max": "25 Ah x 28 V (IoT, calculated)",
+                "p_load": "ESTIMATE from Odysseus lasting 10-20 hours on battery (Reuters)",
+                "e_min": "ASSUMPTION: 20% of a full battery"},
+}
 
 
 @dataclass(frozen=True)
@@ -26,6 +41,16 @@ class Battery:
     def bridge_hours(self):
         """Hours a full battery lasts with no sunlight before it drops below e_min."""
         return (self.e_max - self.e_min) / self.p_load
+
+    def energy_to_bridge(self, hours):
+        """Wh the load draws through `hours` without sunlight."""
+        return hours * self.p_load
+
+    def profile(self):
+        """The lander as results.json states it: numbers, model and sources."""
+        return {"name": LANDER["name"], "e_max_Wh": self.e_max, "e_min_Wh": self.e_min, "p_panel_W": self.p_panel,
+                "p_load_W": self.p_load, "bridge_hours": self.bridge_hours(), "model": LANDER["model"],
+                "sources": LANDER["sources"]}
 
 
 def simulate(sun, battery):

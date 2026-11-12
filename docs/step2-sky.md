@@ -1,6 +1,6 @@
 # CE 2: Sun and Earth positions (Step 2)
 
-Part of LunarWindow, our CLPS Lunar Mission Browser (NASA Space Apps 2026, team Psut_Solaris).
+Part of LunarWindow, our Lunar Landing Site Navigator (NASA Space Apps 2026, team Psut_Solaris).
 This step computes where the Sun and Earth are in each landing site's sky, every hour, using NASA's SPICE
 toolkit. CE 3 compares these positions with Ash's skylines (Step 1) to find when each site has sunlight and
 Earth contact.

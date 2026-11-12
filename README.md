@@ -1,6 +1,8 @@
-# LunarWindow: CLPS Lunar Mission Browser (NASA Space Apps 2026, team Psut_Solaris)
+# LunarWindow: Lunar Landing Site Navigator (NASA Space Apps 2026, team Psut_Solaris)
 
-From candidate landing sites near the Moon's south pole to ranked sites with sunlight, Earth contact, battery survival, landing-error robustness, best landing dates and a mast recommendation, in `results.json` for the web app. The core is the horizon engine (Step 1), which computes each site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
+Challenge: [Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) (it was called "CLPS Lunar Mission Browser" until the full statement came out; the old link is dead).
+
+From candidate landing sites near the Moon's south pole to ranked sites with **safe landing dates** (power and Earth at touchdown, and the lander lives through the mission), sunrise/sunset and direct-to-Earth windows to the minute, the longest darkness and the energy to bridge it, landing-error robustness within 100 m and a mast recommendation, for the web app. Any coordinates and landing time get the same report from one call (`scripts/analyze.py`). The core is the horizon engine (Step 1), which computes each site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
 
 ## The pipeline, end to end
 
@@ -9,22 +11,51 @@ From candidate landing sites near the Moon's south pole to ranked sites with sun
 | 0 | candidate sites (`sites.csv`: id, x, y, lat, lon, height, slope) | IoT | IoT |
 | 1 | skylines per site and mast (great circles, 20 m + 240 m terrain) | `scripts/run_horizon.py` | Ash |
 | 2 | Sun and Earth positions every hour (NASA SPICE) | `scripts/make_sky.py`, `docs/step2-sky.md` | CE 2 |
-| 3–4 | visibility, scores, battery, best dates, mast, landing error | `scripts/score_sites.py`, `scripts/battery.py` | CE 3, IoT |
-| — | web app on `results.json` | | BIT |
+| 3–4 | visibility, safe landing dates, battery, mast, ranking, landing error | `scripts/score_sites.py`, `scripts/battery.py`, `scripts/events.py` | CE 3, IoT |
+| — | one site in full: skyline, tracks, events, verdict (`sites/<id>.json`) | `scripts/site_report.py`; any coordinates: `scripts/analyze.py` | |
+| — | web app on `results.json` and `sites/<id>.json` (`docs/ui-data-contract.md`); hand-set missions through `scripts/analyze.py` | `web/`, `scripts/build_web.py`, `scripts/serve.py` | BIT |
 
 ```
 python scripts/run_horizon.py data/ldem_75s_240m.lbl sites.csv --fine data/ldem_80s_20m.lbl --out out/run/horizon
-python scripts/make_sky.py --sites sites.csv --year 2027 --out out/run/sky.npz
+python scripts/make_sky.py --sites sites.csv --start 2026-01-01 --days 1826 --out out/run/sky.npz
 python scripts/score_sites.py --horizon out/run/horizon --sky out/run/sky.npz --sites sites.csv --out out/run/results
 python scripts/make_neighbours.py sites.csv out/run/results/results.json --out out/run/nb/sites.csv
 python scripts/run_horizon.py data/ldem_75s_240m.lbl out/run/nb/sites.csv --fine data/ldem_80s_20m.lbl --out out/run/nb
 python scripts/score_sites.py --horizon out/run/horizon --sky out/run/sky.npz --sites sites.csv --neighbours out/run/nb --out out/run/results
 ```
 
-- The first two commands are independent; the last three add the landing-error check (17 points within 100 m of each top site, which then rank by their worst score there).
-- On the 400 demo sites the whole chain takes about 1.5 minutes. Sites beyond about 36 km from the pole need `ldem_80s_20m` (1.85 GB, same PDS folder as the other maps).
-- `results.json`: every per-mast number is for that site and mast's best landing date; `meta` records the settings, battery numbers and their sources.
-- **Battery numbers are provisional** (IoT): 200 W panels, 700 Wh, a 50 W load (estimate) and a 140 Wh floor (assumption) bridge only 11.2 hours without sunlight, so few sites survive a 14-day mission. Change them with `--p-load`, `--e-min` and the other battery options of `scripts/score_sites.py`.
+- The first two commands are independent; the last three add the landing-error check (17 points within 100 m of each top site).
+- The sky covers 2026–2030, the years CLPS and Artemis III plan to fly: 1,812 landing dates per site. On the 400 demo sites that's a 235 MB sky file, 12 s for the sky and about 2 minutes for the rest. Sites beyond about 36 km from the pole need `ldem_80s_20m` (1.85 GB, same PDS folder as the other maps).
+- **No weighted score.** Every number is physical:
+  - A **safe landing date** has more than half the Sun visible and Earth in view in the landing hour, Earth in view for at least half the mission (`--min-dte-share`, no relay), and the battery never drops below its floor during the mission. `safe_landing_days` counts them: the official text's "launch delays ... alternative dates" as a number.
+  - **One ranking per mast height** (`top_sites_by_mast`): most safe landing days (within 100 m where checked), then the least battery needed for the longest darkness. The **recommended mast** (the shortest mast with a safe landing date) is information only.
+  - **Within 100 m** (`--neighbours`): a lander aimed at a site comes down anywhere within 100 m, so a date counts only if it is safe at all 17 points there. The top sites then rank on those days. On the demo grid this changes the answer: site 72 has 112 safe days at 0 m on its own point, but none that hold within 100 m until a 5 m mast.
+  - The **longest darkness** is the cold soak, and `bridge_Wh` is the energy to get through it at the load given. That covers thermal (IM-2 froze at −173 °C) with no new physics.
+- `results.json` (version 4) summarises every site; `sites/<id>.json` gives each top site in full. Both are specified in `docs/ui-data-contract.md`.
+- **Battery numbers are provisional** (IoT): 200 W panels, 700 Wh, a 50 W load (estimate) and a 140 Wh floor (assumption) bridge only 11.2 hours without sunlight. The model gives the panels the visible fraction of the Sun whatever its direction, i.e. a sun-tracking array, so survival is an upper bound for fixed panels (see the IM-1 replay). Change the numbers with `--p-load`, `--e-min` and the other battery options of `scripts/score_sites.py`.
+- `--earth-margin` makes Earth count only when it clears the skyline by that many degrees (an antenna mask). The default 0 is NASA's rule: any part of Earth's disc visible. Earth in view is not a guaranteed link, but NASA's three Deep Space Network complexes cover the Moon almost continuously, so Earth visibility is the binding constraint.
+
+### Any site, any landing time
+
+```
+python scripts/analyze.py --lat -89.778601 --lon -155.72556 --mast 2 --start 2027-03-01T06 --days 14 --coarse data/ldem_75s_240m.lbl --fine data/ldem_875s_20m.lbl --out out/analyze/rim.json
+```
+
+It runs the engine and SPICE for that one site and writes the same report as `sites/<id>.json`, printing the verdict and the reasons (e.g. "terrain 2.5 km away blocks it (bearing 265 deg ...)"). It takes seconds and needs the maps and kernels, so it runs on a laptop, not in the browser.
+
+### The web app (LunarWindow)
+
+```
+python scripts/build_web.py --results out/run/results     # Moon textures + a copy of the results into web/
+python scripts/serve.py                                     # http://127.0.0.1:8765/
+```
+
+- `web/index.html` is the whole app: a 3D Moon (NASA's LRO colour map, lit with LOLA slopes), a planner map over NASA's sunlight and Earth-visibility maps, one ranking per panel/antenna height, the site's numbers, the **mission player** (the horizon seen from the lander with the Sun and Earth, countdowns to sunset and Earthset, battery), and a side-by-side comparison.
+- **Plan your own mission:** set the location, landing hour, mission length, height, battery, panel power, load and Earth margin by hand, or start from a named site (`named_sites.csv`: IM-1 and IM-2 at their real landing hours, the Shackleton rim and crest, the ridge). `scripts/serve.py` runs it through `scripts/analyze.py` (the real engine, SPICE and battery model) in 1–3 s and the player shows the result.
+- The page computes no physics: it draws the pipeline's files. Without the server (e.g. a static host), everything but hand-set missions works from `web/data/`.
+- `build_web.py` needs NASA's CGI Moon Kit textures in `data/moon/`: `lroc_color_poles_4k.tif` and `ldem_4.tif` from <https://svs.gsfc.nasa.gov/4720>.
+
+**IM-1 replay** (`docs/im1-replay.md`): at Odysseus' real landing site and dates, the tool puts terrain sunset on 2 March 2024 at 14:17 UTC. The lander lost power on 29 February with the Sun still about 5° above the skyline, because it lay tipped with fixed panels facing the wrong way. Terrain didn't end that mission; attitude did.
 
 ## Start here (team)
 
@@ -59,12 +90,22 @@ scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step
 scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horizon_meta.json for Steps 3-4
 scripts/make_sky.py   Step 2: Sun and Earth positions per site and hour (SPICE) -> sky.npz
 scripts/validate_sky_skyfield.py  independent check of sky.npz with Skyfield
-scripts/score_sites.py  Steps 3-4: visibility, scores, battery, best dates, mast, landing error -> results.json
+scripts/score_sites.py  Steps 3-4: visibility, safe landing dates, battery, mast, ranking, landing error -> results.json, sites/<id>.json
+scripts/events.py     sunrise/sunset, Earthrise/Earthset and DTE windows to the minute; Sun clearance above the skyline
+scripts/site_report.py  one site in full for the web app (skyline, tracks, events, verdict, reasons)
+scripts/analyze.py    any coordinates and landing time -> the same site report
 scripts/battery.py    battery model (IoT)
 scripts/make_neighbours.py  points within 100 m of the top sites, for the landing-error check
+scripts/sensitivity.py  safe days vs battery size and antenna mask
+scripts/named_to_sites.py  named_sites.csv (IM-1, IM-2, Shackleton, ...) -> sites.csv with height and slope over 100 m
+scripts/build_web.py  Moon textures and a copy of the results for the web app
+scripts/serve.py      serves web/ and runs hand-set missions (POST /api/mission -> scripts/analyze.py)
+web/                  the web app: index.html, assets/ (Moon, NASA PGDA basemaps), data/ (built by build_web.py)
+named_sites.csv       notable sites with citations and real landing hours
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader,
                        estimates, fast vs reference, sites.csv checks, convergence, batch run end to end,
-                       great-circle geometry, Step 2 joint test with the engine, Steps 3-4 formulas and battery
+                       great-circle geometry, Step 2 joint test with the engine, Steps 3-4 formulas and battery,
+                       touchdown rule and ranking, events to the minute, site report, real-terrain regressions
 ```
 
 ## Setup
@@ -73,10 +114,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 93 passed
+python -m pytest -q                # expect: 123 passed
 ```
 
-Without the LOLA maps in `data/`, the two real-terrain checks in `test_fast.py` are skipped (91 passed, 2 skipped).
+Without the LOLA maps and SPICE kernels in `data/`, the five real-data checks are skipped (118 passed, 5 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%) and `analyze` end to end.
 
 ## Part 1: synthetic demo (no download needed)
 
@@ -191,15 +232,33 @@ Each ray samples the 20 m map out to `D_FINE` = 40 km from the site and the 240 
 
 ```
 python scripts/validate_pgda.py data/ldem_75s_240m.lbl data/ldem_875s_20m.lbl data/AVGVISIB_85S_060M_201608.TIF data/AVGVISIB_85S_060M_201608_EARTH.TIF
+python scripts/validate_pgda.py ... --lat -89.47485 --lon -137.44314 --out out/validate_pgda_ridge.png
 ```
 
-Runs the engine at the centre of each of the 10 × 10 NASA pixels around the rim site (a 600 m square), with 20 m terrain near each pixel and the 240 m map beyond, and compares our Sun and Earth estimates with NASA's values. Expect:
+Runs the engine at the centre of each of the 10 × 10 NASA 60 m pixels around a site (a 600 m square), with 20 m terrain near each pixel and the 240 m map beyond. It then computes Sun and Earth visibility exactly as NASA's maps define them, with the pipeline's own sky (SPICE, every hour for 18.6 years) and Step 3 formulas: the average visible fraction of the Sun's disc, and the share of hours with any part of Earth's disc in view. NASA's product page says its maps are "averaged over hourly timesteps spanning 18.6 years" and counts Earth as visible "if any part of its disc is not obscured".
 
-| Mast | Sun: correlation / average difference / within 10 points | Earth: correlation / average difference |
-|---|---|---|
-| 0 m | 0.50 / −11.0 / 64% | 0.78 / −10.0 |
-| **2 m** | **0.92 / +0.4 / 93%** | 0.85 / −3.8 |
-| 5 m | 0.82 / +7.9 / 70% | 0.86 / +0.8 |
-| 10 m | 0.57 / +15.1 / 48% | 0.84 / +5.5 |
+Two sites: the Shackleton rim site, and the brightest NASA pixel within 30 km of the pole away from it (88.4% Sun at 89.475°S, 137.44°W, on the Shackleton–de Gerlache ridge). Correlation / average difference (ours − NASA, points) / share within 10 points:
 
-At 2 m our Sun estimate matches NASA's map pixel by pixel (scatter plot in `out/validate_pgda.png`). NASA doesn't state its observer height, so that is an observed best fit, not a fact about their setup. Earth matches less well because our Earth estimate is crude; SPICE (Step 2) will replace it.
+| Mast | Rim: Sun | Rim: Earth | Ridge: Sun | Ridge: Earth |
+|---|---|---|---|---|
+| 0 m | 0.49 / −11.3 / 64% | 0.80 / −5.8 / 78% | 0.57 / −14.2 / 37% | 0.81 / −5.0 / 78% |
+| **2 m** | **0.92 / +0.1 / 94%** | **0.85 / +0.6 / 89%** | **0.83 / +1.9 / 86%** | **0.90 / +2.2 / 92%** |
+| 5 m | 0.82 / +7.6 / 70% | 0.89 / +4.8 / 80% | 0.74 / +13.6 / 43% | 0.90 / +5.4 / 73% |
+| 10 m | 0.57 / +14.7 / 49% | 0.86 / +8.6 / 67% | 0.56 / +25.1 / 12% | 0.85 / +7.4 / 63% |
+
+- At 2 m our Sun and Earth match NASA's maps pixel by pixel at both sites, within about 2 points on average. Scatter plots: `out/validate_pgda.png`, `out/validate_pgda_ridge.png`.
+- 2 m is the best fit at both sites independently. NASA doesn't state its observer height, so that's an observed fit, not a fact about their setup.
+- Before Nov 12 this used rough estimates (a yearly sine for the Sun, a libration band for Earth): Sun 0.92 / +0.4, Earth 0.85 / −3.8 at the rim. With the real SPICE sky the Earth bias drops from −3.8 to +0.6 points.
+- Each block's 100 pixels lie within 600 m and share the distant skyline, so they aren't 100 independent checks. The two sites, 9.8 km apart, are.
+
+## References
+
+- Smith, D. E., et al. (2010). The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission. *Space Science Reviews*, 150, 209–241. (LOLA)
+- LOLA gridded data records (LDEM_75S_240M, LDEM_875S_20M), NASA PDS Geosciences Node: <https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/>
+- Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., & Torrence, M. H. (2011). Illumination conditions of the lunar polar regions using LOLA topography. *Icarus*, 211, 1066–1081. (the horizon method and NASA's PGDA maps)
+- NASA PGDA, Lunar Polar Illumination (product 69): <https://pgda.gsfc.nasa.gov/products/69>
+- Acton, C. H. (1996). Ancillary data services of NASA's Navigation and Ancillary Information Facility. *Planetary and Space Science*, 44(1), 65–70. (SPICE)
+- Folkner, W. M., Williams, J. G., & Boggs, D. H. (2008). The Planetary and Lunar Ephemeris DE 421. *IPN Progress Report* 42-178. (DE421 and the Moon's orientation)
+- Barker, M. K., et al. (2021). Improved LOLA elevation maps for south pole landing sites: Error estimates and their impact on illumination conditions. *Planetary and Space Science*, 203, 105119. https://doi.org/10.1016/j.pss.2020.105119 (why 20 m terrain near a site matters)
+- NASA, Artemis overview for the Space Apps Challenge (landing site requirements: within 6° of the pole, slope under 10°, direct-to-Earth communication, land within 100 m): <https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf>
+- Software: [SpiceyPy](https://github.com/AndrewAnnex/SpiceyPy), [NumPy](https://numpy.org), [Numba](https://numba.pydata.org), [rasterio](https://rasterio.readthedocs.io), [pyproj](https://pyproj4.github.io/pyproj), [Skyfield](https://rhodesmill.org/skyfield) (independent sky check).

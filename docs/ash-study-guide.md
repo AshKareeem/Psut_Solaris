@@ -29,7 +29,7 @@ Every number in this guide was either checked against a source (listed at the en
 
 ### 1.2 Our challenge: "CLPS Lunar Mission Browser"
 
-Official page: <https://www.spaceappschallenge.org/2026/challenges/clps-lunar-mission-browser/>
+Official page: <https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/> (renamed from "CLPS Lunar Mission Browser" when the full statement came out; the old link is dead)
 Subjects: Human Exploration, Moon, Software, Space Exploration.
 
 > Missions to the Moon's south pole face extreme lighting and communication constraints, and planning them takes careful coordination between science and engineering teams. Tools for determining Sun and Earth positions at candidate landing sites exist, but their complicated interfaces make it difficult to evaluate critical information with efficiency. Your challenge is to create an intuitive tool or application that lets mission planners, educators, and the public compare landing sites and dates quickly, visualizing Sun and Earth positions relative to the horizon to assess power generation potential and direct-to-Earth communication windows.
@@ -516,7 +516,7 @@ Answer these out loud before checking the answers.
 
 ## Sources
 
-- [NASA Space Apps 2026: CLPS Lunar Mission Browser](https://www.spaceappschallenge.org/2026/challenges/clps-lunar-mission-browser/)
+- [NASA Space Apps 2026: Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/)
 - [NASA Space Apps Challenge 2026](https://www.spaceappschallenge.org/2026/)
 - [Registration open for Space Apps 2026: key dates (Astrobiology)](https://astrobiology.com/2026/09/04/registration-is-now-open-for-the-2026-nasa-space-apps-challenge/)
 - [Space Apps 2026 schedule incl. Nov 13 guides (Internshala listing)](https://internshala.com/competitions/nasa-international-space-apps-challenge-2026-registration/)

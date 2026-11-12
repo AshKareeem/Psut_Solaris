@@ -1,0 +1,7 @@
+id,name,kind,lat,lon,source,landed_utc,landed_source
+im1,IM-1 Odysseus (Intuitive Machines),landing_site,-80.13,1.44,https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/,2024-02-22T23,https://en.wikipedia.org/wiki/IM-1 (touchdown 23:23 UTC)
+im2,IM-2 Athena (Intuitive Machines),landing_site,-84.7906,29.1957,https://lroc.im-ldi.com/images/1408,2025-03-06T17,"https://en.wikipedia.org/wiki/IM-2 (terminal descent 17:27 UTC, touchdown about 3 min later)"
+shackleton_rim,Shackleton rim (highest rim pixel of LOLA 240 m),study_site,-89.778601,-155.72556,computed: centre of the highest rim pixel of LDEM_75S_240M (row 1931 col 1894),,
+shackleton_crest,Crest 103 m from the Shackleton rim site,study_site,-89.78131485,-156.25683234,computed: highest LDEM_875S_20M pixel within 250 m of shackleton_rim (+9.25 m),,
+sdg_ridge,Shackleton-de Gerlache ridge (NASA's brightest pixel within 30 km of the pole),study_site,-89.47485,-137.44314,computed: brightest pixel of NASA PGDA AVGVISIB_85S_060M_201608 within 30 km of the pole,,
+apollo11,Apollo 11 Tranquility Base,out_of_coverage,0.67408,23.47297,https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo11info.html,,

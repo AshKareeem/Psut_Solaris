@@ -1,7 +1,7 @@
-"""Points within 100 m of the top sites, for the landing-error check (team PDF, Step 4: worst score within 100 m).
+"""Points within 100 m of the ranked sites, for the landing-error check (NASA: land within 100 m of the target).
 
-For each top site in results.json: the site itself plus 8 directions at 50 m and 100 m (17 points). Writes a
-sites.csv with an extra `parent` column (row of the parent site in the original sites.csv). Run the engine on it
+For each site in any list of results.json's meta.top_sites_by_mast: the site itself plus 8 directions at 50 m and
+100 m (17 points). Writes a sites.csv with an extra `parent` column (row of the parent site in the original sites.csv). Run the engine on it
 (scripts/run_horizon.py), then scripts/score_sites.py --neighbours. Height and slope are the parent's (display
 only: the engine takes the ground from the terrain). Within 6 deg of the pole the map scale is within 0.3% of
 true, so 100 m on the map stays within 100 m on the ground.
@@ -34,15 +34,17 @@ def offsets():
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sites", help="the sites.csv the results were made from")
-    ap.add_argument("results", help="results.json from scripts/score_sites.py (uses meta.top_sites)")
+    ap.add_argument("results", help="results.json from scripts/score_sites.py (uses meta.top_sites_by_mast)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
     with open(a.sites, newline="") as f:
         rows = list(csv.DictReader(f))
-    top = json.loads(Path(a.results).read_text())["meta"]["top_sites"]
+    row_of = {row["id"]: i for i, row in enumerate(rows)}
+    lists = json.loads(Path(a.results).read_text())["meta"]["top_sites_by_mast"]
+    top = sorted({row_of[site_id] for ids in lists.values() for site_id in ids})
     if not top:
-        raise SystemExit("results.json has no top sites")
+        raise SystemExit("results.json ranks no sites")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     with open(a.out, "w", newline="") as f:
         w = csv.writer(f)

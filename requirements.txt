@@ -7,3 +7,4 @@ numba
 spiceypy
 pandas
 skyfield
+pillow
