@@ -53,6 +53,7 @@ python scripts/serve.py                                     # http://127.0.0.1:8
 - `web/index.html` is the whole app: a 3D Moon (NASA's LRO colour map, lit with LOLA slopes), a planner map over NASA's sunlight and Earth-visibility maps, one ranking per panel/antenna height, the site's numbers, the **mission player** (the horizon seen from the lander with the Sun and Earth, countdowns to sunset and Earthset, battery), and a side-by-side comparison.
 - **Plan your own mission:** set the location, landing hour, mission length, height, battery, panel power, load and Earth margin by hand, or start from a named site (`named_sites.csv`: IM-1 and IM-2 at their real landing hours, the Shackleton rim and crest, the ridge). `scripts/serve.py` runs it through `scripts/analyze.py` (the real engine, SPICE and battery model) in 1–3 s and the player shows the result.
 - The page computes no physics: it draws the pipeline's files. Without the server (e.g. a static host), everything but hand-set missions works from `web/data/`.
+- **Offline, no server:** `python scripts/build_standalone.py` packs `web/` (page, data, images) into one file, `web_standalone/lunarwindow_standalone.html` (about 7 MB), that opens by double-click. Re-run it after `build_web.py`. Hand-set missions still need `serve.py`.
 - `build_web.py` needs NASA's CGI Moon Kit textures in `data/moon/`: `lroc_color_poles_4k.tif` and `ldem_4.tif` from <https://svs.gsfc.nasa.gov/4720>.
 
 **IM-1 replay** (`docs/im1-replay.md`): at Odysseus' real landing site and dates, the tool puts terrain sunset on 2 March 2024 at 14:17 UTC. The lander lost power on 29 February with the Sun still about 5° above the skyline, because it lay tipped with fixed panels facing the wrong way. Terrain didn't end that mission; attitude did.
@@ -100,6 +101,7 @@ scripts/sensitivity.py  safe days vs battery size and antenna mask
 scripts/named_to_sites.py  named_sites.csv (IM-1, IM-2, Shackleton, ...) -> sites.csv with height and slope over 100 m
 scripts/build_web.py  Moon textures and a copy of the results for the web app
 scripts/serve.py      serves web/ and runs hand-set missions (POST /api/mission -> scripts/analyze.py)
+scripts/build_standalone.py  web/ as one double-click HTML file for an offline demo (BIT)
 web/                  the web app: index.html, assets/ (Moon, NASA PGDA basemaps), data/ (built by build_web.py)
 named_sites.csv       notable sites with citations and real landing hours
 tests/                 smooth Moon, cone, ring crater, map loading, direction convention, PGDA reader,
@@ -114,10 +116,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 123 passed
+python -m pytest -q                # expect: 130 passed
 ```
 
-Without the LOLA maps and SPICE kernels in `data/`, the five real-data checks are skipped (118 passed, 5 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%) and `analyze` end to end.
+Without the LOLA maps and SPICE kernels in `data/`, the five real-data checks are skipped (125 passed, 5 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%) and `analyze` end to end.
 
 ## Part 1: synthetic demo (no download needed)
 

@@ -193,7 +193,12 @@ canvas{display:block;width:100%}
 .mrun{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .mrun .st{color:var(--muted);font-size:.92rem}
 .mrun .st.bad{color:var(--bad)}
-#tline{height:210px;margin-top:12px;cursor:pointer;touch-action:none}
+#tline{height:150px;margin-top:10px;cursor:pointer;touch-action:none}
+.batline{margin:6px 0 12px;padding:8px 12px;border-radius:8px;font-size:.95rem;border:1px solid var(--line);background:var(--panel2)}
+.batline.ok{border-left:3px solid var(--good)}
+.batline.warn{border-left:3px solid var(--sun)}
+.batline.bad{border-left:3px solid var(--bad)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
 #elev{height:190px;margin-top:6px}
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
 .play{width:46px;height:46px;border-radius:50%;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);background:var(--accent-deep);color:var(--accent);font-size:1.1rem}
@@ -272,19 +277,6 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       <div class="stat"><div class="v num">108</div><div class="k">Automated tests passing</div></div>
     </div>
 
-    <section class="block" id="how">
-      <div class="eyebrow">How it works</div>
-      <h2 class="title">From terrain to a landing decision</h2>
-      <p class="lead">The slow part, every site's skyline, is worked out once. After that, any date is a quick check of "is the Sun above the hills?"</p>
-      <div class="card constel-card"><canvas id="constel" aria-label="How it works: candidate sites feed the terrain skyline and the Sun and Earth positions; both feed the power and contact check, which gives the landing decision"></canvas>
-        <p class="hint" style="margin:8px 0 0">Each step feeds the next; the moving dots show data flowing toward the landing decision.</p></div>
-      <div class="steps">
-        <div class="step"><div class="n"></div><h3>Skyline</h3><p>NASA LOLA terrain, 20 m near each site and 240 m out to 250 km, gives the horizon in every direction, including the Moon's curvature.</p><div class="who">Step 1 · horizon engine</div></div>
-        <div class="step"><div class="n"></div><h3>Sun and Earth</h3><p>NASA's SPICE toolkit places the Sun and Earth in each site's sky every hour, including the Moon's wobble (libration).</p><div class="who">Step 2 · sky positions</div></div>
-        <div class="step"><div class="n"></div><h3>Power and contact</h3><p>Each hour: how much of the Sun clears the skyline, whether Earth is visible, and the battery level.</p><div class="who">Steps 3–4 · visibility and survival</div></div>
-        <div class="step"><div class="n"></div><h3>Decision</h3><p>Ranked sites, best landing dates and the shortest antenna or solar mast that keeps the lander alive.</p><div class="who">This planner</div></div>
-      </div>
-    </section>
   </div>
 
   <section class="block" id="planner" style="padding-top:24px">
@@ -356,8 +348,9 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
                 <input type="range" id="scrub" min="0" max="335" value="0" aria-label="Mission hour">
                 <div class="clock num" id="clock"></div>
               </div>
+              <canvas id="tline" aria-label="Sunlight, Earth contact and battery on the same playhead as the skyline; tap or drag to move through the mission"></canvas>
+              <p class="batline" id="batLine" aria-live="polite"></p>
               <div class="explain">Grey is the terrain the lander sees; point at it to see how far away the hill is that sets the horizon. The orange disc is the Sun and the blue disc is Earth, drawn at the hour you pick. When the Sun sinks behind the grey, the panels stop charging. When Earth sinks, the lander can't talk home.</div>
-              <canvas id="tline" aria-label="Sunlight, Earth contact and battery over the mission; tap to jump to an hour"></canvas>
               <h3 style="margin-top:14px">Solar elevation</h3>
               <p class="hint">The Sun's height (orange) against the terrain in its direction (grey). The gap between them is your power margin.</p>
               <canvas id="elev" aria-label="Sun height against the terrain over the mission"></canvas>
@@ -395,6 +388,22 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       </div>
     </div>
   </section>
+
+  <div class="wrap">
+    <section class="block" id="how">
+      <div class="eyebrow">How it works</div>
+      <h2 class="title">From terrain to a landing decision</h2>
+      <p class="lead">The slow part, every site's skyline, is worked out once. After that, any date is a quick check of "is the Sun above the hills?"</p>
+      <div class="card constel-card"><canvas id="constel" aria-label="How it works: candidate sites feed the terrain skyline and the Sun and Earth positions; both feed the power and contact check, which gives the landing decision"></canvas>
+        <p class="hint" style="margin:8px 0 0">Each step feeds the next; the moving dots show data flowing toward the landing decision.</p></div>
+      <div class="steps">
+        <div class="step"><div class="n"></div><h3>Skyline</h3><p>NASA LOLA terrain, 20 m near each site and 240 m out to 250 km, gives the horizon in every direction, including the Moon's curvature.</p><div class="who">Step 1 · horizon engine</div></div>
+        <div class="step"><div class="n"></div><h3>Sun and Earth</h3><p>NASA's SPICE toolkit places the Sun and Earth in each site's sky every hour, including the Moon's wobble (libration).</p><div class="who">Step 2 · sky positions</div></div>
+        <div class="step"><div class="n"></div><h3>Power and contact</h3><p>Each hour: how much of the Sun clears the skyline, whether Earth is visible, and the battery level.</p><div class="who">Steps 3–4 · visibility and survival</div></div>
+        <div class="step"><div class="n"></div><h3>Decision</h3><p>Ranked sites, best landing dates and the shortest antenna or solar mast that keeps the lander alive.</p><div class="who">This planner</div></div>
+      </div>
+    </section>
+  </div>
 
   <section class="block" id="compare">
     <div class="wrap">
@@ -685,7 +694,7 @@ function drawPlayer(){
   ].join("");
   $("clock").innerHTML = `<b>Day ${Math.floor(i / 24) + 1}</b> · ${hourTxt(h.time_utc[i])}`;
   $("scrub").value = i;
-  drawPano(S, i); drawTimeline(S, i); drawElev(S, i);
+  drawPano(S, i); drawTimeline(S, i); batteryLine(S, i); drawElev(S, i);
 }
 function drawPano(S, i){
   const c = $("pano"); const [g, W, H] = setup(c); const { h, sk } = S;
@@ -729,24 +738,60 @@ function drawPano(S, i){
   const ticks = view === "follow" ? [0, span / 2, span] : [0, 90, 180, 270, 360];
   ticks.forEach(d => { const a = wrap360(a0 + d); const lab = view === "full" && d === 90 ? "90° Earth side" : Math.round(a) + "°"; g.fillText(lab, clamp(X(d), 60, W - 30), H - 6); });
 }
+function reserveHour(S){   // first hour the battery is below its reserve (the pipeline's verdict), -1 if never
+  const k = S.d.summary.dies_at_hour;
+  return k == null ? -1 : k;
+}
 function drawTimeline(S, i){
   const c = $("tline"); const [g, W, H] = setup(c); const { d, h, n, t0 } = S, Lr = lander();
   const L = W < 520 ? 74 : 104, R = 8, X = k => L + k / n * (W - L - R), bw = (W - L - R) / n + 0.6;
   const hourOf = (t, edge) => t == null ? edge : (ms(t) - t0) / 3600e3;
-  const rows = [["Sunlight", 4, 38], ["Earth contact", 48, 18], ["Both", 72, 18]];
-  g.fillStyle = css("--muted"); g.textAlign = "left"; rows.forEach(([t, y, hh]) => g.fillText(t, 0, y + hh / 2 + 4)); g.fillText("Battery", 0, 108);
-  g.fillStyle = css("--sun"); h.sun_fraction.forEach((v, k) => { const hh = 38 * v; g.fillRect(X(k), 4 + 38 - hh, bw, hh); });
-  g.fillStyle = css("--earth"); h.earth_visible.forEach((v, k) => { if (v) g.fillRect(X(k), 48, bw, 18); });
-  g.fillStyle = css("--good"); d.events.both.forEach(w => { const a = hourOf(w.start, 0), b = hourOf(w.end, n); g.fillRect(X(a), 72, X(b) - X(a), 18); });
-  const b = h.battery_Wh, top = 98, bh = H - top - 22, Yb = v => top + bh - v / Lr.e_max_Wh * bh;
-  g.strokeStyle = css("--line"); g.strokeRect(L, top, W - L - R, bh);
+  const rows = [["Sunlight", 2, 24], [W < 520 ? "Earth" : "Earth contact", 30, 10], ["Both", 44, 10]];
+  g.fillStyle = css("--muted"); g.textAlign = "left"; rows.forEach(([t, y, hh]) => g.fillText(t, 0, y + hh / 2 + 4));
+  g.fillStyle = css("--sun"); h.sun_fraction.forEach((v, k) => { const hh = 24 * v; g.fillRect(X(k), 2 + 24 - hh, bw, hh); });
+  g.fillStyle = css("--earth"); h.earth_visible.forEach((v, k) => { if (v) g.fillRect(X(k), 30, bw, 10); });
+  g.fillStyle = css("--good"); d.events.both.forEach(w => { const a = hourOf(w.start, 0), b = hourOf(w.end, n); g.fillRect(X(a), 44, X(b) - X(a), 10); });
+  // battery
+  const b = h.battery_Wh, top = 62, bh = H - top - 20, Yb = v => top + 3 + (bh - 6) - v / Lr.e_max_Wh * (bh - 6);
+  g.fillStyle = css("--muted"); g.fillText("Battery", 0, top + bh / 2 + 4);
+  g.strokeStyle = css("--line"); g.lineWidth = 1; g.strokeRect(L, top, W - L - R, bh);
   g.setLineDash([5, 4]); g.strokeStyle = css("--bad"); g.beginPath(); g.moveTo(L, Yb(Lr.e_min_Wh)); g.lineTo(W - R, Yb(Lr.e_min_Wh)); g.stroke(); g.setLineDash([]);
-  g.fillStyle = css("--bad"); g.textAlign = "right"; g.fillText("safety minimum", W - R - 4, Yb(Lr.e_min_Wh) - 4);
+  const resLeft = X(i) > L + (W - L - R) / 2;   // keep the reserve label on the side away from the playhead
+  g.fillStyle = css("--bad"); g.textAlign = resLeft ? "left" : "right"; g.fillText(`reserve ${Math.round(Lr.e_min_Wh)} Wh`, resLeft ? L + 4 : W - R - 4, Math.min(top + bh - 3, Yb(Lr.e_min_Wh) + 12));
   g.strokeStyle = css("--ink"); g.lineWidth = 1.5; g.beginPath(); b.forEach((v, k) => k ? g.lineTo(X(k), Yb(v)) : g.moveTo(X(k), Yb(v))); g.stroke();
+  const hit = reserveHour(S);
+  if (hit >= 0){ g.strokeStyle = css("--bad"); g.lineWidth = 1.5; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(hit), top); g.lineTo(X(hit), top + bh); g.stroke(); g.setLineDash([]); }
+  // day ticks
   g.fillStyle = css("--muted"); g.textAlign = "center"; const step = Math.max(W < 520 ? 4 : 2, Math.ceil(n / 240));
   for (let dd = 0; dd * 24 <= n; dd += step){ const x = X(dd * 24); if (x <= W - R - 16) g.fillText("day " + (dd + 1), Math.max(x, L + 16), H - 4); }
-  g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.moveTo(X(i), 0); g.lineTo(X(i), top + bh); g.stroke();
+  // the shared playhead: one line through every row, with a dot riding the battery line
+  const px = X(i), py = Yb(b[i]);
+  g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.moveTo(px, 0); g.lineTo(px, top + bh); g.stroke();
+  g.fillStyle = css("--panel"); g.beginPath(); g.arc(px, py, 6, 0, 7); g.fill();
+  g.fillStyle = hit >= 0 && i >= hit ? css("--bad") : css("--accent"); g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill();
+  const lab = Math.round(b[i]) + " Wh"; g.font = '600 12px "Barlow", system-ui, sans-serif'; const lw = g.measureText(lab).width;
+  const lx = px + 10 + lw > W - R ? px - 10 - lw : px + 10, ly = clamp(py + (py < top + 16 ? 15 : -7), top + 12, top + bh - 4);
+  g.fillStyle = css("--panel"); g.globalAlpha = 0.9; g.fillRect(lx - 3, ly - 12, lw + 6, 16); g.globalAlpha = 1;   // backing so it never collides with the reserve label
+  g.fillStyle = css("--ink"); g.textAlign = "left"; g.fillText(lab, lx, ly);
   c._map = x => clamp(Math.round((x - L) / (W - L - R) * n), 0, n - 1);
+}
+function batteryLine(S, i){
+  const { h, n } = S, Lr = lander(), b = h.battery_Wh, emin = Math.round(Lr.e_min_Wh), el = $("batLine");
+  const hit = reserveHour(S); let lo = 0; for (let k = 1; k < n; k++) if (b[k] < b[lo]) lo = k;
+  const when = k => `day ${Math.floor(k / 24) + 1}, ${hourTxt(h.time_utc[k])}`;
+  const jump = k => `<button class="linkbtn" data-h="${k}">hour ${k}</button>`;
+  if (hit >= 0){
+    const rel = i < hit ? ` · ${hit - i} h after the playhead` : i === hit ? " · at the playhead" : ` · ${i - hit} h before the playhead`;
+    el.className = "batline " + (i >= hit ? "bad" : "warn");
+    el.innerHTML = `Battery drops below its ${emin} Wh reserve at ${jump(hit)} (${when(hit)})${rel}: the lander does not survive this mission.`;
+  } else if (Math.round(b[lo]) >= Math.round(Lr.e_max_Wh)){
+    el.className = "batline ok";
+    el.innerHTML = `Battery reserve never reached: the battery stays full (${Math.round(b[lo])} Wh) for the whole mission, far above the ${emin} Wh reserve.`;
+  } else {
+    el.className = "batline ok";
+    el.innerHTML = `Battery reserve never reached: lowest ${Math.round(b[lo])} Wh at ${jump(lo)} (${when(lo)}), above the ${emin} Wh reserve.`;
+  }
+  el.querySelectorAll("[data-h]").forEach(x => x.onclick = () => { stop(); cursor = +x.dataset.h; drawPlayer(); });
 }
 function drawElev(S, i){
   const c = $("elev"); const [g, W, H] = setup(c); const { h, n, terrSun } = S;
