@@ -8,8 +8,8 @@ bearings, clockwise from local north.
 """
 import numpy as np
 
-from scripts.battery import levels, simulate
-from scripts.events import earth_clearance, site_events, skyline_at, sun_clearance, sun_fraction
+from scripts.battery import Battery, levels, simulate
+from scripts.events import earth_clearance, intervals, site_events, skyline_at, sun_clearance, sun_fraction, to_utc
 
 VERSION = 1
 # The submission rules: generated code and data must acknowledge generation in text and metadata.
@@ -60,6 +60,88 @@ def clears(H, D, theta, clearance, lon):
     return f"{clearance:.2f} deg above the skyline (bearing {bearing(theta, lon):.0f} deg, set by {what} at {sky:.2f} deg)"
 
 
+# ---------------------------------------------------------------------------------------------------------------
+# The failsafe blocks (spec commit 2): a contact plan, a verdict per dark spell, and a half-battery what-if.
+# Visibility comes from scripts/events.py and the battery from scripts/battery.py; nothing here is new physics.
+WEAK_FACTOR = 0.5
+WEAK_LABEL = "assumption: half the battery, e.g. a cell lost or a cold battery"
+
+
+def contact_plan_block(earth_c, t0, hours, longest_blackout_h):
+    """The Earth-contact windows (events.intervals on the same clearance as events.dte) that cover touchdown, the
+    mission's middle hour and its last hour; the first contact at or after touchdown; what has no window."""
+    spans = intervals(np.asarray(earth_c))
+    holds = lambda span, t: (span[0] is None or span[0] <= t) and (span[1] is None or t < span[1])
+    covers, order, missing = {}, [], []
+    for name, t in (("touchdown", 0.0), ("mid-mission", hours / 2), ("end", hours - 1.0)):
+        span = next((sp for sp in spans if holds(sp, t)), None)
+        if span is None:
+            missing.append(name)
+        else:
+            if span not in covers:
+                covers[span], _ = [], order.append(span)
+            covers[span].append(name)
+    first = None if not spans else to_utc(0.0 if spans[0][0] is None else spans[0][0], t0)
+    return {"first_contact_utc": first,
+            "windows": [{"start": to_utc(a, t0), "end": to_utc(b, t0), "covers": covers[(a, b)]} for a, b in order],
+            "missing": missing, "longest_blackout_h": int(longest_blackout_h)}
+
+
+def dark_verdict_block(lit, battery_Wh, battery, utc):
+    """One entry per run of hours with the Sun at or under half (s <= 0.5), from the battery level series the
+    report already carries: when it starts, its first hour after (end), the level entering it, the lowest inside,
+    and whether the level stays at or above e_min right through (lasts). [] when the Sun never sets."""
+    out, h, n = [], 0, len(lit)
+    while h < n:
+        if lit[h]:
+            h += 1
+            continue
+        start = h
+        while h < n and not lit[h]:
+            h += 1
+        lowest = min(battery_Wh[start:h])
+        out.append({"start": utc(start), "end": utc(h), "hours": h - start,
+                    "battery_start_Wh": round(battery_Wh[start - 1] if start else battery.e_max, 1),
+                    "battery_lowest_Wh": round(lowest, 1), "lasts": bool(lowest >= battery.e_min)})
+    return out
+
+
+def weak_battery_block(s, battery, factor=WEAK_FACTOR):
+    """The same mission through battery.simulate with the capacity scaled by `factor`; the reserve scales too, so
+    it stays 20% of a full battery, as battery.py defines it. Panel and load are unchanged."""
+    b = Battery(battery.e_max * factor, battery.e_min * factor, battery.p_panel, battery.p_load, battery.dt)
+    lowest, death = (float(v) for v in simulate(np.asarray(s, float), b))
+    return {"capacity_factor": factor, "e_max_Wh": b.e_max, "e_min_Wh": b.e_min,
+            "survives": bool(death < 0), "dies_at_hour": None if death < 0 else int(death), "label": WEAK_LABEL}
+
+
+def failsafe_words(cp, dark, weak, battery, utc, hours):
+    """The three blocks in plain English. Every survives/lasts claim says "at best (sun-tracking panels)"."""
+    words = []
+    if cp["first_contact_utc"] is None:
+        words.append("Earth is never in view during the mission: no plan can be uploaded.")
+    elif not cp["missing"]:
+        words.append(f"Earth in view at touchdown, mid-mission and end: upload the plan at landing and confirm it "
+                     f"on {utc(hours // 2)[:10]}.")
+    else:
+        words.append(f"No Earth contact at {' or '.join(cp['missing'])}: first contact "
+                     f"{cp['first_contact_utc']} UTC, longest blackout {cp['longest_blackout_h']} h.")
+    if not dark:
+        words.append("No darkness during the mission.")
+    else:
+        bad = next((r for r in dark if not r["lasts"]), None)
+        head = f"{len(dark)} dark spell{'s' if len(dark) > 1 else ''}, the longest {max(r['hours'] for r in dark)} h"
+        if bad is None:
+            words.append(f"{head}; the battery lasts through every one, at best (sun-tracking panels).")
+        else:
+            words.append(f"{head}; the battery does not last through the spell starting {bad['start']} UTC: even "
+                         f"at best (sun-tracking panels) it drops below {battery.e_min:g} Wh.")
+    words.append("With half the battery it still survives, at best (sun-tracking panels)." if weak["survives"]
+                 else f"With half the battery it dies at hour {weak['dies_at_hour']} "
+                      f"({utc(weak['dies_at_hour'])} UTC), even at best (sun-tracking panels).")
+    return words
+
+
 def site_report(site, H, D, complete, track, mast, battery, earth_margin):
     """site: id, lat, lon, x_m, y_m; H, D, complete: [n_az] at this mast; track: the mission's hourly Sun and Earth
     (time_utc, sun_az, sun_el, earth_az, earth_el, sun_radius_deg, earth_radius_deg). Returns a JSON-ready dict."""
@@ -76,6 +158,7 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
     t0 = np.datetime64(str(track["time_utc"][0]))
     utc = lambda h: str(t0 + np.timedelta64(int(h), "h"))[:13]
     r = lambda a, n=2: [round(float(v), n) for v in a]
+    battery_Wh = levels(s, battery)
 
     near = [name for name, up, c in (("the Sun's centre", lit[0], sun_c[0]), ("the top of Earth's disc", e[0], earth_c[0]))
             if up and c < MARGINAL_DEG]
@@ -135,6 +218,10 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         "version": VERSION, "provenance": PROVENANCE, "site": site, "mast_m": mast, "earth_margin_deg": earth_margin,
         "mission": {"start_utc": utc(0), "hours": hours},
         "summary": summary, "verdict": verdict, "why": why,
+        "contact_plan": (cp := contact_plan_block(earth_c, t0, hours, quiet_h)),
+        "dark_verdict": (dark := dark_verdict_block(lit, battery_Wh, battery, utc)),
+        "weak_battery": (weak := weak_battery_block(s, battery)),
+        "words": failsafe_words(cp, dark, weak, battery, utc, hours),
         "events": site_events(sun_c, earth_c, t0),
         "skyline": {"theta_deg": r(np.arange(H.size) * 360.0 / H.size), "horizon_deg": r(H, 3),
                     "blocker_km": r(D / 1e3), "complete": [bool(v) for v in complete]},
@@ -142,4 +229,4 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
                    "sun_az": r(track["sun_az"]), "sun_el": r(track["sun_el"], 3), "sun_clearance_deg": r(sun_c, 3),
                    "earth_az": r(track["earth_az"]), "earth_el": r(track["earth_el"], 3),
                    "earth_clearance_deg": r(earth_c, 3), "sun_fraction": r(s),
-                   "earth_visible": [bool(v) for v in e], "battery_Wh": r(levels(s, battery), 1)}}
+                   "earth_visible": [bool(v) for v in e], "battery_Wh": r(battery_Wh, 1)}}

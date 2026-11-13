@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from scripts.battery import Battery
-from scripts.site_report import bearing, longest_span, site_report
+from scripts.site_report import bearing, longest_span, site_report, weak_battery_block
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 SITE = {"id": "t", "lat": -89.5, "lon": 0.0, "x_m": 0.0, "y_m": 15161.0}
@@ -63,3 +63,61 @@ def test_analyze_any_coordinates_end_to_end():
     rep = analyze(-89.5, 200.0, 10.0, "2027-03-01T06", 2, DATA / "ldem_75s_240m.lbl")
     assert rep["site"]["lon"] == -160.0 and rep["mission"] == {"start_utc": "2027-03-01T06", "hours": 48}
     assert len(rep["hourly"]["time_utc"]) == 48 and all(rep["skyline"]["complete"])
+
+
+def flat(n=360):
+    return np.zeros(n), np.full(n, 5000.0), np.ones(n, bool)
+
+
+def test_contact_plan_windows_are_dte_entries_and_missing_names_the_gap():
+    """Spec commit 2, tests 1-2. Earth up 6 h, down 6, up 12: two DTE windows; touchdown (hour 0) is in the first,
+    mid-mission (hour 12) and end (hour 23) in the second; nothing missing."""
+    H, D, ok = flat()
+    rep = site_report(SITE, H, D, ok, track([1.0] * 24, [2.0] * 6 + [-2.0] * 6 + [2.0] * 12), 2.0, Battery(), 0.0)
+    cp = rep["contact_plan"]
+    assert cp["missing"] == [] and cp["longest_blackout_h"] == rep["summary"]["longest_earth_blackout_h"]
+    assert len(cp["windows"]) == 2
+    for w in cp["windows"]:
+        assert {"start": w["start"], "end": w["end"]} in rep["events"]["dte"]
+    assert cp["windows"][0]["covers"] == ["touchdown"] and cp["windows"][1]["covers"] == ["mid-mission", "end"]
+    assert cp["first_contact_utc"] == "2027-01-01T00:00:00"   # the sky file stamps carry seconds
+    # Earth sets for good before mid-mission: the plan cannot be confirmed mid-mission or at the end
+    rep = site_report(SITE, H, D, ok, track([1.0] * 24, [2.0] * 12 + [-2.0] * 12), 2.0, Battery(), 0.0)
+    assert rep["contact_plan"]["missing"] == ["mid-mission", "end"]
+    # Earth hidden at touchdown: first contact is the first window's start, to the minute
+    rep = site_report(SITE, H, D, ok, track([1.0] * 24, [-2.0] * 12 + [2.0] * 12), 2.0, Battery(), 0.0)
+    cp = rep["contact_plan"]
+    assert cp["missing"] == ["touchdown"] and cp["first_contact_utc"] == rep["events"]["dte"][0]["start"]
+
+
+def test_dark_verdict_agrees_with_the_summary():
+    """Spec commit 2, test 3: the 12-hour ridge spell from the first test kills the battery (bridge 11.2 h), so
+    exactly one run, lasts False, and its length is the summary's longest_dark_h."""
+    H, D = np.zeros(360), np.full(360, 5000.0)
+    H[5:16], D[5:16] = 3.0, 8200.0
+    t = track([1.0] * 24, [2.0] * 24)
+    t["sun_az"][6:18] = 10.0
+    t["sun_az"][:6] = t["sun_az"][18:] = 100.0
+    rep = site_report(SITE, H, D, np.ones(360, bool), t, 2.0, Battery(), 0.0)
+    runs = rep["dark_verdict"]
+    assert len(runs) == 1 and runs[0]["hours"] == rep["summary"]["longest_dark_h"] == 12
+    assert runs[0]["start"] == "2027-01-01T06" and runs[0]["end"] == "2027-01-01T18"
+    assert runs[0]["battery_start_Wh"] == 700.0 and runs[0]["battery_lowest_Wh"] == rep["summary"]["battery_lowest_Wh"]
+    assert any(not r["lasts"] for r in runs) == (not rep["summary"]["survives"])
+    rep = site_report(SITE, *flat(), track([1.0] * 24, [2.0] * 24), 2.0, Battery(), 0.0)
+    assert rep["dark_verdict"] == [] and rep["summary"]["survives"]          # the Sun never sets
+    assert any(not r["lasts"] for r in rep["dark_verdict"]) == (not rep["summary"]["survives"])
+
+
+def test_weak_battery_at_factor_1_reproduces_the_summary():
+    """Spec commit 2, test 4. 11 dark hours then Sun: the full battery survives at 150 Wh (test_battery_matches...),
+    at half capacity (350 Wh, reserve 70 Wh) the 50 W load passes 70 Wh during hour 5: 350 - 50 x 6 = 50 Wh."""
+    rep = site_report(SITE, *flat(), track([-1.0] * 11 + [1.0] * 13, [2.0] * 24), 2.0, Battery(), 0.0)
+    s = np.array(rep["hourly"]["sun_fraction"])
+    full = weak_battery_block(s, Battery(), 1.0)
+    assert full["survives"] == rep["summary"]["survives"] is True
+    assert full["dies_at_hour"] == rep["summary"]["dies_at_hour"] is None
+    wb = rep["weak_battery"]
+    assert wb["capacity_factor"] == 0.5 and wb["e_max_Wh"] == 350.0 and wb["e_min_Wh"] == 70.0
+    assert wb["survives"] is False and wb["dies_at_hour"] == 5 and "assumption" in wb["label"]
+    assert any("at best (sun-tracking panels)" in w for w in rep["words"])
