@@ -59,7 +59,7 @@ NASA scientists use this same ``horizon method'' to publish long-term illuminati
   \node[box] (s1) at (4.4,0)  {\textbf{Step 1}\\Horizon profile};
   \node[box] (s2) at (7.9,1.8) {\textbf{Step 2}\\Sun \& Earth positions};
   \node[box] (s3) at (7.9,0)  {\textbf{Step 3}\\Visibility each hour};
-  \node[box] (s4) at (11.1,0) {\textbf{Step 4}\\Score \& rank};
+  \node[box] (s4) at (11.1,0) {\textbf{Step 4}\\Safe dates \& rank};
   \node[box, very thick] (out) at (14.3,0) {\textbf{Output}\\ranked sites, web map};
   \node[box] (s5) at (7.9,-2.5) {\textbf{Step 5}\\Prove it is right};
   \node[grp, fit=(s0)(s1)] (g1) {};
@@ -226,30 +226,35 @@ The ``any part of Earth'' rule matches the one NASA uses for its Earth-visibilit
 \end{figure}
 
 % ---------------------------------------------------------------------
-\section{Step 4: Score and Rank}
+\section{Step 4: Safe Landing Dates and Ranking}
 
-\textbf{Gates.} A site must be within 6\textdegree{} of the pole and have a slope under 10\textdegree. Sites that fail are removed, not scored.
+\textbf{Gates.} A site must be within 6\textdegree{} of the pole and have a slope under 10\textdegree. Sites that fail are removed, not ranked.
 
-\textbf{Metrics over the mission window $T$.} $f_\text{sun}$, $f_\text{earth}$ and $f_\text{both}$ are the fractions of hours with $s>0.5$, $e$ and $b$ true. $g$ is the longest stretch without sunlight.
-\begin{equation}
-S = w_1 f_\text{sun} + w_2 f_\text{earth} + w_3 f_\text{both} - w_4\, g/T
-\end{equation}
-The weights are set by the user in the web app.
+\textbf{No weighted score.} An earlier version added the metrics into one score with weights. It gave many ties and called dates ``best'' on which the lander died, so it was removed. Every number below is a physical quantity.
+
+\textbf{Metrics over a mission of $T$ hours} (14 days), for a mission starting at \emph{every hour} from 2026 to 2030: $f_\text{sun}$, $f_\text{earth}$ and $f_\text{both}$ are the fractions of hours with $s>0.5$, $e$ and $b$ true; $g$ is the longest stretch without sunlight (the cold soak).
 
 \textbf{Battery survival.} A simple energy budget with panel power $P_\text{panel}$, load $P_\text{load}$ and time step $\Delta t$:
 \begin{equation}
 E_{t+1} = \min\!\big(E_{\max},\; E_t + (P_\text{panel}\, s(t) - P_\text{load})\,\Delta t\big)
 \end{equation}
-The site survives if $E_t \ge E_{\min}$ at every hour. Sites that do not survive are ranked last.
+The lander survives if $E_t \ge E_{\min}$ at every hour. \emph{Battery needed} is $E_{\max}$ minus the lowest level, taken from this simulation, so sunlight that returns partway counts.
 
-\textbf{Landing accuracy.} A lander cannot hit an exact pixel; NASA's reference is within 100\,m of the target~\cite{nasa-artemis}. So rank each site by the worst score within 100\,m of it:
-\begin{equation}
-S_\text{robust}(p) = \min_{|q - p| \le 100\ \text{m}} S(q)
-\end{equation}
+\textbf{Safe landing hour.} A landing hour is safe if all three hold:
+\begin{enumerate}
+  \item \emph{touchdown}: more than half the Sun and Earth are in view in the landing hour;
+  \item Earth is in view for at least half of the mission (direct-to-Earth, no relay~\cite{nasa-artemis});
+  \item the battery never drops below $E_{\min}$.
+\end{enumerate}
+A landing day is safe if any of its hours is. The headline number per site and mast is the count of \emph{safe landing days}.
 
-\textbf{Mast height.} Using the horizons from Step~1 at several mast heights, report the lowest mast that meets the targets.
+\textbf{Landing accuracy.} A lander cannot hit an exact pixel; NASA's reference is within 100\,m of the target~\cite{nasa-artemis}. So a date counts for a site only if it is safe at every one of 17 points within 100\,m of it (the site, 8 points at 50\,m and 8 at 100\,m). For example, the best grid site at a 2\,m mast has 79 safe landing days on its exact point but 18 within 100\,m.
 
-\textbf{When to land.} Repeat the scoring for every possible start date. The result is a calendar showing the best arrival dates for each site.
+\textbf{Ranking.} One list per mast height: the most safe landing days within 100\,m first, then the most on the site's own point, then the least battery needed. Sites with none within 100\,m stay in the list, below the others.
+
+\textbf{Mast height.} Using the horizons from Step~1 at several mast heights, report the shortest mast with at least one safe landing date.
+
+\textbf{When to land.} Each site gets its best landing hours: the most hours of power and Earth together, then the shortest darkness.
 
 % ---------------------------------------------------------------------
 \section{Step 5: Prove It Is Right}
@@ -264,8 +269,13 @@ S_\text{robust}(p) = \min_{|q - p| \le 100\ \text{m}} S(q)
     \item Step factor 0.002: far from the site, each step is 0.2\% of the distance.
     \item 20\,m terrain out to 40\,km. At 20\,km, sectors are 0.044\textdegree{} off.
   \end{itemize}
-  \item \textbf{Compare with NASA's maps.} NASA's illumination maps~\cite{pgda} are long-term averages, so compare them with our results averaged over at least a year, not one month. Done at Shackleton's rim: we ran the engine at the centres of the 100 NASA 60\,m pixels around our rim site, with 20\,m terrain nearby and 240\,m beyond. From a 2\,m mast, our rough yearly Sun estimate matches NASA's map with correlation 0.92 and an average difference under half a percentage point, with 93\% of pixels within 10 points. Always compare at pixel centres, never ``NASA's value at the site'': a site can sit exactly on the corner of four NASA pixels (at our rim site they read 0\%, 6\%, 47\% and 56\%).
-  \item \textbf{Check the sky.} The Sun stays within about $\pm1.5^\circ$ of level and Earth within about $\pm6.7^\circ$ (Step~2).
+  \item \textbf{Compare with NASA's maps.} NASA's illumination maps~\cite{pgda} are averages over 18.6 years of hourly steps, so we compute ours the same way: our own sky (SPICE, every hour for 18.6 years) and the Step~3 formulas. We ran the engine at the centres of the 100 NASA 60\,m pixels around each of two sites, with 20\,m terrain nearby and 240\,m beyond. From a 2\,m mast (the best fit at both sites; NASA states no observer height):
+  \begin{itemize}
+    \item Shackleton rim: Sun correlation 0.92, average difference $+0.1$ points, 94\% of pixels within 10 points; Earth 0.85, $+0.6$, 89\%.
+    \item Shackleton--de Gerlache ridge: Sun 0.83, $+1.9$; Earth 0.90, $+2.2$.
+  \end{itemize}
+  NASA's maps use the same LOLA terrain, so this checks the method. Always compare at pixel centres, never ``NASA's value at the site'': a site can sit exactly on the corner of four NASA pixels (at our rim site they read 0\%, 6\%, 47\% and 56\%).
+  \item \textbf{Check the sky against NASA JPL Horizons.} Horizons~\cite{horizons} (listed in the challenge's resources) gives the Sun and Earth seen from any point on the Moon. At six named sites, ten hours over 2026--2030 plus the IM-1 and IM-2 landing hours, all 124 positions agree with our Step~2 to within 0.0003\textdegree{} (the Sun's radius is 0.27\textdegree). An independent check with Skyfield agrees to 0.00032\textdegree.
 \end{enumerate}
 
 % ---------------------------------------------------------------------
@@ -289,7 +299,7 @@ Everyone builds against fake files in these formats from day one, so nobody wait
 \texttt{horizon\_meta.json} & Settings: directions, convention, masts, $D_{\max}$, step factor, $R$, terrain files & --- & Step 1 & Step 3 \\
 \texttt{sky.npz} & Sun and Earth az/el each hour & sites $\times$ hours & Step 2 & Step 3 \\
 \texttt{visibility.npz} & $s(t)$, $e(t)$, $b(t)$ & sites $\times$ hours & Step 3 & Step 4 \\
-\texttt{results.json} & Scores, metrics, timelines of top sites & per site & Step 4 & Web app \\
+\texttt{results.json} & Safe landing days, metrics, best dates, one ranking per mast & per site & Step 4 & Web app \\
 \bottomrule
 \end{tabularx}}
 \caption{Data contracts between steps. Read the number of directions and the mast heights from \texttt{horizon\_meta.json} instead of hard-coding them.}
@@ -345,6 +355,10 @@ NASA PDS Geosciences Node, \emph{LRO LOLA polar elevation maps} (LDEM\_875S\_20M
 \bibitem{spice}
 NASA NAIF, \emph{The SPICE Toolkit}.
 \url{https://naif.jpl.nasa.gov/naif/}
+
+\bibitem{horizons}
+NASA JPL Solar System Dynamics, \emph{Horizons System}.
+\url{https://ssd.jpl.nasa.gov/horizons/}
 
 \bibitem{spiceypy}
 SpiceyPy, Python wrapper for SPICE.
