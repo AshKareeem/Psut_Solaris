@@ -2,7 +2,7 @@ import numpy as np
 
 from scripts.battery import Battery, levels, simulate, simulate_windows
 from scripts.events import skyline_at
-from scripts.score_sites import (battery_needed, best_dates, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
+from scripts.score_sites import (battery_needed, best_dates, rank_reasons, ranking_keys, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
                                  visibility, window_longest_run, window_sum)
 
 
@@ -163,3 +163,16 @@ def test_a_date_counts_within_100_m_only_if_safe_at_every_point(tmp_path):
                                                    parent_safe)
     assert safe_100m[0, 0].tolist() == [False] * 24 + [True] * 25   # the ridge hides touchdown on day 1
     assert complete[0, 0] and n_points.tolist() == [2]
+
+
+def test_rank_reasons_name_the_metric_that_decides_each_place():
+    ids = np.array(["a", "b", "c", "d"])
+    values = {"safe_days_within_100m": np.array([18.0, 0.0, 0.0, 0.0]),
+              "safe_landing_days": np.array([79.0, 219.0, 219.0, 92.0]),
+              "battery_needed_Wh": np.array([558.0, 300.0, 300.0, np.nan])}
+    r = rank_reasons([0, 1, 2, 3], values, ids, ranking_keys(True))
+    assert r[0] == ("#1 of 4. Ahead of #2 (site b): safe landing days if the lander misses by up to 100 m: 18 vs 0.")
+    assert "Ahead of #3 (site c): every metric ties; listed by site order." in r[1]
+    assert "Ahead of #4 (site d): safe landing days on the exact point: 219 vs 92." in r[2]
+    assert r[3].endswith("Behind #3 (site c): safe landing days on the exact point: 219 vs 92.")
+    assert [k[0] for k in ranking_keys(False)] == ["safe_landing_days", "battery_needed_Wh"]

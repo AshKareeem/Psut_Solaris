@@ -178,6 +178,40 @@ def ranking(rows, days, on_target, need_Wh):
     return rows[np.lexsort((rows, need_Wh[rows], -on_target[rows], -days[rows]))].tolist()
 
 
+def ranking_keys(checked_100m):
+    """The ranking's keys in order, as (field in results.json masts{}, plain words, 'more' or 'less' is better).
+    Without the 100 m check the first key is the exact point's days, so the second adds nothing and is left out."""
+    keys = [("safe_days_within_100m", "safe landing days if the lander misses by up to 100 m", "more"),
+            ("safe_landing_days", "safe landing days on the exact point", "more"),
+            ("battery_needed_Wh", "battery needed (worst safe landing)", "less")]
+    return keys if checked_100m else keys[1:]
+
+
+def rank_reasons(rows, values, ids, keys):
+    """For an ordered list of site rows: {row: sentence} saying which key puts it ahead of the next site and behind
+    the one before, with both numbers. values[field][row] holds each key's number (NaN: none)."""
+    def show(field, row):
+        v = values[field][row]
+        return "none" if not np.isfinite(v) else f"{v:.0f} Wh" if field == "battery_needed_Wh" else f"{v:.0f}"
+
+    def decider(a, b):                      # first key on which rows a and b differ
+        for field, words, _ in keys:
+            va, vb = values[field][a], values[field][b]
+            if not (va == vb or (np.isnan(va) and np.isnan(vb))):
+                return f"{words}: {show(field, a)} vs {show(field, b)}"
+        return "every metric ties; listed by site order"
+
+    out = {}
+    for k, row in enumerate(rows):
+        parts = [f"#{k + 1} of {len(rows)}."]
+        if k + 1 < len(rows):
+            parts.append(f"Ahead of #{k + 2} (site {ids[rows[k + 1]]}): {decider(row, rows[k + 1])}.")
+        if k > 0:
+            parts.append(f"Behind #{k} (site {ids[rows[k - 1]]}): {decider(rows[k - 1], row)}.")
+        out[row] = " ".join(parts)
+    return out
+
+
 def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe):
     """Landing dates safe at the parent and at every point within 100 m [sites, masts, dates] (False for sites not
     checked), whether every point's rays are complete [sites, masts], and the points per site."""
@@ -264,6 +298,10 @@ def main():
         by_mast = [ranking(c, np.nan_to_num(days_100m[:, m]), n_safe[:, m], need_Wh[:, m])[: a.top]
                    for m, c in enumerate(candidates)]
     ranked = sorted({i for rows in by_mast for i in rows})
+    keys = ranking_keys(a.neighbours is not None)
+    values = [{"safe_days_within_100m": days_100m[:, m], "safe_landing_days": n_safe[:, m].astype(float),
+               "battery_needed_Wh": need_Wh[:, m]} for m in range(len(masts))]
+    reasons = [rank_reasons(rows, values[m], ids, keys) for m, rows in enumerate(by_mast)]
     # the headline landing per site and mast: the best one safe within 100 m where that check ran and found one,
     # else the best on the exact point. Every per-mast number and that mast's mission file use it, so they agree.
     use_100m = np.zeros((n_sites, len(masts)), bool) if order_100m is None else         np.take_along_axis(safe_100m, order_100m[0][..., None], axis=-1)[..., 0]
@@ -294,7 +332,8 @@ def main():
                 "fields": "per-mast numbers are for that mast's headline landing (headline_start): the best one "
                           "safe within 100 m where that check found one, else the best on the exact point; null if "
                           "the mast has no safe landing. detail_file is that landing's full mission"},
-            "top_sites_by_mast": {str(mast): ids[rows].tolist() for mast, rows in zip(masts, by_mast)}},
+            "top_sites_by_mast": {str(mast): ids[rows].tolist() for mast, rows in zip(masts, by_mast)},
+            "ranking_keys": [{"field": f, "words": w, "better": b} for f, w, b in keys]},
         "sites": []}
     for i in range(n_sites):
         site = {"id": ids[i], "lat": r(lat[i], 5), "lon": r(lon[i], 4),
@@ -306,6 +345,8 @@ def main():
             best = n_safe[i, m] > 0
             pick = lambda k, f=lambda v: v: f(at_head[k][i, m]) if best else None
             site["masts"][str(mast)] = {
+                "rank": by_mast[m].index(i) + 1 if i in by_mast[m] else None,
+                "rank_reason": reasons[m].get(i),
                 "headline_start": str(starts[head[i, m]])[:13] if best else None,
                 "headline_within_100m": bool(use_100m[i, m]) if best else None,
                 "detail_file": f"sites/{ids[i]}_{mast}.json" if best and i in ranked else None,
