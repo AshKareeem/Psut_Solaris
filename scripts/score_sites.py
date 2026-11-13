@@ -57,7 +57,7 @@ from numba import njit, prange
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.battery import Battery, simulate_windows  # noqa: E402
 from scripts.events import earth_clearance, sun_clearance, sun_fraction  # noqa: E402
-from scripts.site_report import MARGINAL_DEG, PROVENANCE, site_report  # noqa: E402
+from scripts.site_report import MARGINAL_DEG, PROVENANCE, bearing, site_report  # noqa: E402
 
 GATE_LAT, GATE_SLOPE = -84.0, 10.0   # NASA's Artemis III reference: within 6 deg of the pole, slope under 10 deg
 TRACK = ("sun_az", "sun_el", "earth_az", "earth_el")
@@ -227,13 +227,18 @@ def rank_reasons(rows, values, ids, keys):
     return out
 
 
-def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe, steep):
+def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe, steep,
+                   details=False):
     """Landing dates safe at the parent and at every point within 100 m [sites, masts, dates] (False for sites not
     checked), whether every point's rays are complete [sites, masts], and the points per site. steep [points]: the
-    point's slope over 100 m is at or above the gate, so no date is safe there."""
+    point's slope over 100 m is at or above the gate, so no date is safe there. With details, also the per-point
+    metrics it already computes ({"met": date_metrics dict with steep applied to "safe", "s", "e"}), for the risk
+    block's miss table; the default return is unchanged."""
     H_nb, ok_nb = np.load(Path(nb_dir) / "horizon.npy"), np.load(Path(nb_dir) / "complete.npy")
     nb_sky = {k: (v[parent_of] if k in TRACK else v) for k, v in sky.items()}
-    safe = date_metrics(*visibility(H_nb, nb_sky, earth_margin), hours, battery, min_dte_share)["safe"]
+    s_nb, e_nb, b_nb = visibility(H_nb, nb_sky, earth_margin)
+    met_nb = date_metrics(s_nb, e_nb, b_nb, hours, battery, min_dte_share)
+    safe = met_nb["safe"]
     safe[steep] = False
     safe_100m = np.zeros_like(parent_safe)
     complete = np.zeros(parent_safe.shape[:2], bool)
@@ -241,7 +246,98 @@ def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, par
         rows = parent_of == p
         safe_100m[p] = parent_safe[p] & safe[rows].all(axis=0)
         complete[p] = ok_nb[rows].all(axis=(0, 2))
-    return safe_100m, complete, np.bincount(parent_of, minlength=parent_safe.shape[0])
+    counts = np.bincount(parent_of, minlength=parent_safe.shape[0])
+    if details:
+        return safe_100m, complete, counts, {"met": met_nb, "s": s_nb, "e": e_nb}
+    return safe_100m, complete, counts
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# The risk block (failsafe spec, commit 1): launch delays and a 100 m miss, for the mission files this script
+# writes. Every flag is read from the arrays above (date_metrics, neighbour_safe); nothing is recomputed.
+DELAY_SLIPS_H = (1, 6, 24, 709)              # 709 h: the one-lunation slip, a labelled assumption of the spec
+LUNATION_LABEL = "one lunation (29.53 days)"
+
+
+def consecutive_safe(safe, k):
+    """Consecutive safe landing hours in safe [starts] from hour k on: 1 = only hour k itself is safe, 0 = none."""
+    n = 0
+    while k + n < safe.size and safe[k + n]:
+        n += 1
+    return n
+
+
+def delay_ladder(safe, k, start_times):
+    """One row per slip of DELAY_SLIPS_H after the headline hour k of safe [starts]: the slipped landing hour, is
+    it still safe, and the first safe hour at or after it (None if none before the series ends)."""
+    t0 = np.datetime64(str(start_times[k])[:13])
+    rows = []
+    for slip in DELAY_SLIPS_H:
+        j = k + slip
+        later = np.flatnonzero(safe[j:]) if j < safe.size else np.array([], int)
+        row = {"slip_h": slip, "start_utc": str(t0 + np.timedelta64(slip, "h"))[:13],
+               "safe": bool(j < safe.size and safe[j]),
+               "next_safe_utc": str(start_times[j + int(later[0])])[:13] if later.size else None}
+        if slip == 709:
+            row["label"] = LUNATION_LABEL
+        rows.append(row)
+    return rows
+
+
+def point_fails(steep, sun_td, earth_td, n_earth, death_h, hours, min_dte_share):
+    """The first rule a point fails at one landing hour, in the safe rule's order (council R3 slope gate first);
+    None when it passes them all."""
+    if steep:
+        return "slope"
+    if not sun_td:
+        return "sun at touchdown"
+    if not earth_td:
+        return "earth at touchdown"
+    if n_earth < min_dte_share * hours:
+        return "earth for the mission"
+    if death_h >= 0:
+        return "battery"
+    return None
+
+
+def miss_table(rows, nb, parent_x, parent_y, s_nb, e_nb, met_nb, m, k, hours, min_dte_share):
+    """The points within 100 m of one site (rows into the nb arrays) at landing hour k, mast m: is each safe, and
+    the first rule each unsafe point fails. met_nb, s_nb, e_nb come from neighbour_safe(details=True)."""
+    out = []
+    for p in rows:
+        fails = point_fails(float(nb["slope"][p]) >= GATE_SLOPE, bool(s_nb[p, m, k] > 0.5), bool(e_nb[p, m, k]),
+                            int(met_nb["n_earth"][p, m, k]), int(met_nb["death_h"][p, m, k]), hours, min_dte_share)
+        out.append({"point": str(nb["id"][p]), "dx_m": round(float(nb["x"][p]) - parent_x, 1),
+                    "dy_m": round(float(nb["y"][p]) - parent_y, 1),
+                    "safe": bool(met_nb["safe"][p, m, k]), "fails": fails})
+    return out
+
+
+def risk_words(margin, ladder, miss, lon, slope_of):
+    """The risk block in plain English: how late a landing can be, and what a 100 m miss does. slope_of maps a
+    point id to its slope over 100 m, for the slope sentence."""
+    first_bad = next((row for row in ladder if not row["safe"]), None)
+    late = (f"Land up to {margin - 1} h late and it is still safe" if margin > 1
+            else "Only the headline hour itself is safe")
+    if first_bad is None:
+        words = [f"{late}; even one lunation later (709 h) is safe."]
+    else:
+        tail = (f"the next safe hour is {first_bad['next_safe_utc']} UTC" if first_bad["next_safe_utc"]
+                else "no later landing hour before the data ends is safe")
+        words = [f"{late}; a {first_bad['slip_h']} h slip is not: {tail}."]
+    if miss is not None:
+        n_ok = sum(row["safe"] for row in miss)
+        if n_ok == len(miss):
+            words.append(f"Missed by up to 100 m: all {len(miss)} points safe.")
+        else:
+            row = next(row for row in miss if not row["safe"])
+            dist = (row["dx_m"] ** 2 + row["dy_m"] ** 2) ** 0.5
+            theta = float(np.degrees(np.arctan2(row["dy_m"], row["dx_m"])))
+            where = (f"the point {dist:.0f} m toward bearing {bearing(theta, lon):.0f} deg" if dist
+                     else "the target point itself")
+            why = row["fails"] + (f" ({slope_of[row['point']]:.1f} deg)" if row["fails"] == "slope" else "")
+            words.append(f"Missed by up to 100 m: {n_ok} of {len(miss)} points safe; {where} fails on {why}.")
+    return words
 
 
 def r(x, n=3):
@@ -307,9 +403,10 @@ def main():
             raise ValueError(f"--neighbours does not cover ranked sites {sorted(ids[list(missing)])[:10]}: "
                              "re-run scripts/make_neighbours.py on this results.json")
         nb_slope = nb["slope"].astype(float)
-        safe_100m, complete_100m, n_points = neighbour_safe(a.neighbours, sky, hours, battery, a.earth_margin,
-                                                            a.min_dte_share, parent_of, met["safe"],
-                                                            nb_slope >= GATE_SLOPE)
+        safe_100m, complete_100m, n_points, nb_detail = neighbour_safe(a.neighbours, sky, hours, battery,
+                                                                       a.earth_margin, a.min_dte_share, parent_of,
+                                                                       met["safe"], nb_slope >= GATE_SLOPE,
+                                                                       details=True)
         for p in np.unique(parent_of):
             slope_100m[p] = nb_slope[parent_of == p].max()
             steep_100m[p] = int((nb_slope[parent_of == p] >= GATE_SLOPE).sum())
@@ -409,6 +506,20 @@ def main():
             track = {key: sky[key][i, k: k + hours] for key in TRACK}
             track |= {key: sky[key][k: k + hours] for key in ("time_utc", "sun_radius_deg", "earth_radius_deg")}
             report = site_report(info, H[i, m], D[i, m], ok[i, m], track, mast, battery, a.earth_margin)
+            # the risk block (failsafe spec, commit 1): only here, because only this script has the multi-year
+            # safe arrays and the 17 points; analyze.py files carry no risk block (a documented scope)
+            checked = a.neighbours and n_points[i] > 0
+            safe_line = safe_100m[i, m] if checked else met["safe"][i, m]
+            margin = consecutive_safe(safe_line, k)
+            ladder = delay_ladder(safe_line, k, starts)
+            miss = slope_of = None
+            if checked:
+                rows_p = np.flatnonzero(parent_of == i)
+                miss = miss_table(rows_p, nb, float(sites["x"][i]), float(sites["y"][i]),
+                                  nb_detail["s"], nb_detail["e"], nb_detail["met"], m, k, hours, a.min_dte_share)
+                slope_of = {str(nb["id"][p]): float(nb["slope"][p]) for p in rows_p}
+            report["risk"] = {"delay_margin_h": int(margin), "delay_ladder": ladder, "miss_table": miss,
+                              "words": risk_words(margin, ladder, miss, float(lon[i]), slope_of)}
             (out / f).write_text(json.dumps(report))
 
     print(f"{n_sites} sites x {len(masts)} masts x {len(starts)} landing hours ({a.days}-day missions) -> {out}")

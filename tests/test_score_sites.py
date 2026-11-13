@@ -2,8 +2,9 @@ import numpy as np
 
 from scripts.battery import Battery, levels, simulate, simulate_windows
 from scripts.events import skyline_at
-from scripts.score_sites import (battery_needed, best_dates, firm_touchdown, rank_reasons, ranking_keys, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
-                                 visibility, window_longest_run, window_sum)
+from scripts.score_sites import (battery_needed, best_dates, consecutive_safe, delay_ladder, firm_touchdown,
+                                 miss_table, rank_reasons, ranking_keys, risk_words, date_metrics, neighbour_safe,
+                                 ranking, recommended_mast, safe_days, visibility, window_longest_run, window_sum)
 
 
 def test_battery_matches_iots_examples():
@@ -199,3 +200,54 @@ def test_rank_reasons_name_the_metric_that_decides_each_place():
     assert "Ahead of #4 (site d): safe landing days on the exact point: 219 vs 92." in r[2]
     assert r[3].endswith("Behind #3 (site c): safe landing days on the exact point: 219 vs 92.")
     assert [k[0] for k in ranking_keys(False)] == ["safe_landing_days", "battery_needed_Wh"]
+
+
+def test_delay_margin_and_ladder_count_safe_hours_after_the_headline():
+    """Spec commit 1: safe hours k = 3, 4, 5, 6 and 30, headline k = 3. Counted by hand: hours 3-6 are 4 consecutive
+    safe hours (so land up to 3 h late); a 1 h slip (k = 4) is safe; a 6 h slip (k = 9) is not and the first safe
+    hour at or after it is k = 30 = 2026-01-02T06; so is a 24 h slip (k = 27); a 709 h slip leaves the data; 709 h after the headline 2026-01-01T03 is 2026-01-30T16."""
+    safe = np.zeros(40, bool)
+    safe[[3, 4, 5, 6, 30]] = True
+    starts = np.array([str(np.datetime64("2026-01-01T00") + np.timedelta64(h, "h")) for h in range(40)])
+    assert consecutive_safe(safe, 3) == 4 and consecutive_safe(safe, 30) == 1 and consecutive_safe(safe, 7) == 0
+    rows = delay_ladder(safe, 3, starts)
+    assert [r["slip_h"] for r in rows] == [1, 6, 24, 709]
+    assert rows[0] == {"slip_h": 1, "start_utc": "2026-01-01T04", "safe": True, "next_safe_utc": "2026-01-01T04"}
+    assert not rows[1]["safe"] and rows[1]["next_safe_utc"] == "2026-01-02T06"
+    assert not rows[2]["safe"] and rows[2]["next_safe_utc"] == "2026-01-02T06"
+    assert rows[3]["safe"] is False and rows[3]["next_safe_utc"] is None
+    assert rows[3]["label"] == "one lunation (29.53 days)" and rows[3]["start_utc"] == "2026-01-30T16"
+    lookup = {t[:13]: bool(v) for t, v in zip(starts, safe)}         # every non-null next_safe_utc is a safe hour
+    assert all(lookup[r["next_safe_utc"]] for r in rows if r["next_safe_utc"] is not None)
+
+
+def test_miss_table_agrees_with_safe_100m_and_a_steep_point_fails_on_slope_first(tmp_path):
+    """Spec commit 1: two points, the second behind a ridge (skyline 5 deg toward theta 0, the Sun at az 10 and
+    el 1 never clears it), so it is dark at touchdown and no hour is safe within 100 m."""
+    hours = 24
+    sky = {"sun_az": np.full((1, 48), 10.0), "sun_el": np.ones((1, 48)), "earth_az": np.full((1, 48), 90.0),
+           "earth_el": np.full((1, 48), 2.0), "sun_radius_deg": np.full(48, 0.27),
+           "earth_radius_deg": np.full(48, 0.95)}
+    H_points = np.zeros((2, 1, 4))
+    H_points[1, 0, 0] = 5.0
+    np.save(tmp_path / "horizon.npy", H_points)
+    np.save(tmp_path / "complete.npy", np.ones((2, 1, 4), bool))
+    parent_safe = date_metrics(*visibility(np.zeros((1, 1, 4)), sky, 0.0), hours, Battery(), 0.5)["safe"]
+    assert parent_safe[0, 0].all()
+    safe_100m, _, _, det = neighbour_safe(tmp_path, sky, hours, Battery(), 0.0, 0.5, np.array([0, 0]), parent_safe,
+                                          np.array([False, False]), details=True)
+    nb = {"id": np.array(["s_0", "s_1"]), "x": np.array(["0", "100"]), "y": np.array(["0", "0"]),
+          "slope": np.array(["3.0", "4.0"])}
+    rows = miss_table(np.array([0, 1]), nb, 0.0, 0.0, det["s"], det["e"], det["met"], 0, 0, hours, 0.5)
+    assert [r["safe"] for r in rows] == [True, False] and rows[0]["fails"] is None
+    assert rows[1] == {"point": "s_1", "dx_m": 100.0, "dy_m": 0.0, "safe": False, "fails": "sun at touchdown"}
+    assert all(r["safe"] for r in rows) == bool(safe_100m[0, 0, 0])
+    nb["slope"] = np.array(["3.0", "12.0"])                       # steep and dark: slope is reported first
+    rows = miss_table(np.array([0, 1]), nb, 0.0, 0.0, det["s"], det["e"], det["met"], 0, 0, hours, 0.5)
+    assert rows[1]["fails"] == "slope"
+    words = risk_words(4, delay_ladder(parent_safe[0, 0], 0, np.array(
+        [str(np.datetime64("2026-01-01T00") + np.timedelta64(h, "h")) for h in range(25)])), rows, 0.0,
+        {"s_0": 3.0, "s_1": 12.0})
+    assert words[0].startswith("Land up to 3 h late and it is still safe")
+    assert words[1] == ("Missed by up to 100 m: 1 of 2 points safe; the point 100 m toward bearing 90 deg "
+                        "fails on slope (12.0 deg).")
