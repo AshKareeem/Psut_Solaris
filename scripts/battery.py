@@ -18,6 +18,7 @@ energy to bridge it at the user's load, energy_to_bridge(hours).
 from dataclasses import dataclass
 
 import numpy as np
+from numba import njit, prange
 
 LANDER = {
     "name": "Nova-C class (IoT estimate)",
@@ -53,27 +54,58 @@ class Battery:
                 "sources": LANDER["sources"]}
 
 
-def simulate(sun, battery):
-    """sun [..., hours]: visible fraction of the Sun each hour (any leading shape, views are fine).
-    Returns the lowest level reached (Wh) and the first hour the level is below e_min (-1 if never), shape [...]."""
-    level = np.full(sun.shape[:-1], battery.e_max)
-    lowest = level.copy()
-    death = np.full(sun.shape[:-1], -1)
-    for h in range(sun.shape[-1]):
-        level = _step(level, sun[..., h], battery)
-        lowest = np.minimum(lowest, level)
-        death = np.where((death < 0) & (level < battery.e_min), h, death)
+@njit(cache=True)
+def step(level, sun, e_max, p_panel, p_load, dt):
+    """One hour of the model: E + (p_panel * s - p_load) * dt, kept between 0 and e_max. The only copy of the
+    formula: every function below calls it."""
+    return min(max(level + (p_panel * sun - p_load) * dt, 0.0), e_max)
+
+
+@njit(cache=True)
+def _mission(sun, k, hours, e_max, e_min, p_panel, p_load, dt):
+    """The mission of `hours` starting at hour k of sun [T]: lowest level and first hour below e_min (-1: never)."""
+    level, lowest, death = e_max, e_max, -1
+    for h in range(hours):
+        level = step(level, sun[k + h], e_max, p_panel, p_load, dt)
+        lowest = min(lowest, level)
+        if death < 0 and level < e_min:
+            death = h
     return lowest, death
+
+
+@njit(parallel=True, cache=True)
+def _windows(sun, hours, e_max, e_min, p_panel, p_load, dt):
+    n, starts = sun.shape[0], sun.shape[1] - hours + 1
+    lowest, death = np.empty((n, starts), np.float32), np.empty((n, starts), np.int16)
+    for i in prange(n):
+        for k in range(starts):
+            lowest[i, k], death[i, k] = _mission(sun[i], k, hours, e_max, e_min, p_panel, p_load, dt)
+    return lowest, death
+
+
+def _args(battery):
+    return battery.e_max, battery.e_min, battery.p_panel, battery.p_load, battery.dt
+
+
+def simulate(sun, battery):
+    """sun [..., hours]: visible fraction of the Sun each hour of one mission (any leading shape).
+    Returns the lowest level reached (Wh) and the first hour the level is below e_min (-1 if never), shape [...]."""
+    flat = np.ascontiguousarray(sun, np.float64).reshape(-1, sun.shape[-1])
+    lowest, death = _windows(flat, sun.shape[-1], *_args(battery))
+    return lowest[:, 0].astype(np.float64).reshape(sun.shape[:-1]), death[:, 0].astype(int).reshape(sun.shape[:-1])
+
+
+def simulate_windows(sun, hours, battery):
+    """sun [sites, T]: visible fraction of the Sun each hour of the sky file. For the mission of `hours` that starts
+    at every hour k = 0 .. T - hours: lowest level (Wh, float32) and first hour below e_min (int16, -1 if never),
+    each [sites, T - hours + 1]."""
+    return _windows(np.ascontiguousarray(sun, np.float64), hours, *_args(battery))
 
 
 def levels(sun, battery):
     """Battery level (Wh) after every hour, for one site's timeline."""
-    level, out = np.float64(battery.e_max), []
+    level, out = float(battery.e_max), []
     for s in sun:
-        level = _step(level, s, battery)
-        out.append(float(level))
+        level = step(level, float(s), battery.e_max, battery.p_panel, battery.p_load, battery.dt)
+        out.append(level)
     return out
-
-
-def _step(level, sun, battery):
-    return np.clip(level + (battery.p_panel * sun - battery.p_load) * battery.dt, 0.0, battery.e_max)

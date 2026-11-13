@@ -1,8 +1,9 @@
 import numpy as np
 
-from scripts.battery import Battery, levels, simulate
-from scripts.events import longest_run, skyline_at
-from scripts.score_sites import best_dates, date_metrics, neighbour_safe, ranking, recommended_mast, visibility
+from scripts.battery import Battery, levels, simulate, simulate_windows
+from scripts.events import skyline_at
+from scripts.score_sites import (best_dates, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
+                                 visibility, window_longest_run, window_sum)
 
 
 def test_battery_matches_iots_examples():
@@ -37,18 +38,46 @@ def test_visibility_uses_the_team_formulas_each_hours_radii_and_the_earth_margin
     assert e[0, 0].tolist() == [False, False, True]         # an antenna needing 1 deg of clearance
 
 
-def test_metrics_per_landing_date_touchdown_and_longest_dark_run():
-    assert longest_run(np.array([True, True, False, True, True, True, False])) == 3
-    hours = 48                                              # a 2-day mission, 3 days of data: 2 landing dates
+def test_metrics_per_landing_hour_touchdown_and_longest_dark_run():
+    hours = 48                                              # a 2-day mission, 3 days of data: 25 landing hours
     s = np.zeros((1, 1, 72), np.float32)
     s[..., 24:] = 1.0                                       # dark on day 1, lit after
     e = np.ones_like(s, bool)
     met = date_metrics(s, e, (s > 0.5) & e, hours, Battery(), 0.5)
-    assert met["n_sun"][0, 0].tolist() == [24, 48]
-    assert met["gap_h"][0, 0].tolist() == [24, 0]
-    assert met["death_h"][0, 0].tolist() == [11, -1]        # 24 dark hours kill it on the first date only
-    assert met["touchdown"][0, 0].tolist() == [False, True]
-    assert met["safe"][0, 0].tolist() == [False, True]
+    assert met["safe"].shape == (1, 1, 25)
+    assert met["n_sun"][0, 0, [0, 12, 24]].tolist() == [24, 36, 48]
+    assert met["gap_h"][0, 0, [0, 12, 24]].tolist() == [24, 12, 0]
+    assert met["death_h"][0, 0, [0, 12, 24]].tolist() == [11, 11, -1]   # 12 or more dark hours kill it
+    assert met["touchdown"][0, 0].tolist() == [False] * 24 + [True]
+    assert met["safe"][0, 0].tolist() == [False] * 24 + [True]
+
+
+def test_windowed_metrics_match_each_mission_computed_on_its_own():
+    rng = np.random.default_rng(1)
+    sun = rng.choice([0.0, 0.3, 0.6, 1.0], size=(3, 200))
+    hours, b = 50, Battery()
+    lowest, death = simulate_windows(sun, hours, b)
+    runs = window_longest_run(sun < 0.5, hours)
+    sums = window_sum(sun > 0.5, hours)
+    for i in range(3):
+        for k in range(0, 151, 7):
+            w = sun[i, k:k + hours]
+            lo, de = simulate(w, b)
+            assert abs(lowest[i, k] - lo) < 1e-3 and death[i, k] == de
+            dark = "".join("1" if v < 0.5 else "0" for v in w)
+            assert runs[i, k] == max(len(x) for x in dark.split("0")) and sums[i, k] == (w > 0.5).sum()
+
+
+def test_a_sky_whose_only_safe_touchdown_is_1300_gives_one_safe_day():
+    """Council R7: landing only at 00:00 UTC missed every day whose safe touchdown is later in the day."""
+    hours = 24
+    s = np.full((1, 1, 48), 0.4, np.float32)                # under half the Sun, yet 80 W > 50 W: it charges
+    s[..., 13] = 1.0                                        # power at touchdown only at 13:00 on day 1
+    e = np.ones_like(s, bool)
+    met = date_metrics(s, e, (s > 0.5) & e, hours, Battery(), 0.5)
+    assert np.flatnonzero(met["safe"][0, 0]).tolist() == [13]
+    assert safe_days(met["safe"])[0, 0] == 1
+    assert best_dates(met, hours, 1)[0, 0, 0] == 13
 
 
 def test_a_date_that_dies_is_never_a_best_date():
@@ -63,10 +92,14 @@ def test_a_date_that_dies_is_never_a_best_date():
     assert np.isnan(recommended_mast(met["safe"].sum(-1), [0.0])[0])
 
 
-def test_best_date_most_power_and_earth_then_shortest_darkness_then_earliest():
-    met = {"safe": np.array([[[False, True, True, True]]]), "n_both": np.array([[[99, 10, 12, 12]]]),
-           "gap_h": np.array([[[0, 1, 5, 3]]])}
-    assert best_dates(met, 24, 3)[:, 0, 0].tolist() == [3, 2, 1]
+def test_best_dates_are_the_best_hour_of_the_best_days():
+    """Most power and Earth together, then the shortest darkness, then the earliest; one entry per day."""
+    safe, both, gap = np.zeros((1, 1, 72), bool), np.zeros((1, 1, 72), np.int16), np.zeros((1, 1, 72), np.int16)
+    safe[..., [2, 5, 30, 50, 60]] = True
+    both[..., [0, 2, 5, 30, 50, 60]] = [99, 10, 10, 12, 12, 12]   # hour 0 is not safe: never listed
+    gap[..., [2, 5, 30, 50, 60]] = [4, 0, 5, 3, 3]                 # hour 5 beats hour 2 on darkness
+    met = {"safe": safe, "n_both": both, "gap_h": gap}
+    assert best_dates(met, 24, 3)[:, 0, 0].tolist() == [50, 30, 5]  # day 3 (earliest of 50, 60), day 2, day 1 (hour 5)
 
 
 def test_ranking_per_mast_by_safe_days_then_battery_needed():
@@ -105,7 +138,8 @@ def test_a_date_counts_within_100_m_only_if_safe_at_every_point(tmp_path):
     np.save(tmp_path / "horizon.npy", H_points)
     np.save(tmp_path / "complete.npy", np.ones((2, 1, 4), bool))
     parent_safe = date_metrics(*visibility(H_parent, sky, 0.0), 24, Battery(), 0.5)["safe"]
-    assert parent_safe[0, 0].tolist() == [True, True, True]
+    assert parent_safe[0, 0].all() and parent_safe.shape == (1, 1, 49)
     safe_100m, complete, n_points = neighbour_safe(tmp_path, sky, 24, Battery(), 0.0, 0.5, np.array([0, 0]),
                                                    parent_safe)
-    assert safe_100m[0, 0].tolist() == [False, True, True] and complete[0, 0] and n_points.tolist() == [2]
+    assert safe_100m[0, 0].tolist() == [False] * 24 + [True] * 25   # the ridge hides touchdown on day 1
+    assert complete[0, 0] and n_points.tolist() == [2]

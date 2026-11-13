@@ -83,13 +83,3 @@ def site_events(sun_c, earth_c, t0):
     left = lambda v: None if v is None else round(v, 2)
     return {"sunlit": utc(sun), "dte": utc(earth), "both": utc(both),
             "hours_to_sunset": left(until_end(sun, 0.0)), "hours_to_earthset": left(until_end(earth, 0.0))}
-
-
-def longest_run(flags):
-    """Longest run of True along the last axis."""
-    run = np.zeros(flags.shape[:-1], np.int32)
-    best = run.copy()
-    for h in range(flags.shape[-1]):
-        run = np.where(flags[..., h], run + 1, 0)
-        best = np.maximum(best, run)
-    return best

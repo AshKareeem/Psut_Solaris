@@ -20,7 +20,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.battery import Battery  # noqa: E402
-from scripts.score_sites import date_metrics, load, visibility  # noqa: E402
+from scripts.score_sites import date_metrics, load, safe_days, visibility  # noqa: E402
 
 
 def main():
@@ -38,12 +38,12 @@ def main():
     meta, H, _, _, sky, sites = load(a.horizon, a.sky, a.sites)
     masts, hours, lander = [float(m) for m in meta["masts_m"]], a.days * 24, Battery()
     s, e, b = visibility(H, sky, 0.0)
-    safe_days = {}
+    days_by_e_max = {}
     for e_max in a.e_max:                       # e_min stays the same share of a full battery
         battery = replace(lander, e_max=e_max, e_min=e_max * lander.e_min / lander.e_max)
-        safe_days[e_max] = date_metrics(s, e, b, hours, battery, a.min_dte_share)["safe"].sum(-1)
+        days_by_e_max[e_max] = safe_days(date_metrics(s, e, b, hours, battery, a.min_dte_share)["safe"])
         print(f"battery {e_max:g} Wh: bridges {battery.bridge_hours():.1f} h; sites with a safe date per mast "
-              + ", ".join(f"{m:g} m: {(safe_days[e_max][:, i] > 0).sum()}" for i, m in enumerate(masts)))
+              + ", ".join(f"{m:g} m: {(days_by_e_max[e_max][:, i] > 0).sum()}" for i, m in enumerate(masts)))
     dte = {0.0: e.mean(-1)}
     for mask in a.masks:
         dte[mask] = visibility(H, sky, mask)[1].mean(-1)
@@ -58,7 +58,7 @@ def main():
                                  "dte_share_by_mask": "share of all hours with Earth in view for an antenna that "
                                                       "needs that many degrees of clearance above the skyline"}},
         "sites": [{"id": str(sites["id"][i]), "masts": {str(m): {
-            "safe_days_by_e_max": {f"{v:g}": int(safe_days[v][i, j]) for v in a.e_max},
+            "safe_days_by_e_max": {f"{v:g}": int(days_by_e_max[v][i, j]) for v in a.e_max},
             "dte_share_by_mask": {f"{k:g}": round(float(dte[k][i, j]), 3) for k in dte}}
             for j, m in enumerate(masts)}} for i in range(H.shape[0])]}
     Path(a.out).mkdir(parents=True, exist_ok=True)
