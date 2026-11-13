@@ -82,6 +82,57 @@ hourly                      one entry per mission hour
   sun_fraction (0-1), earth_visible, battery_Wh
 ```
 
+### Failsafe blocks (added Nov 14)
+
+Five blocks for "what can go wrong, before you commit": four in every mission file, one (`risk`) **in the files
+`scripts/score_sites.py` writes only** — `scripts/analyze.py` (and so `POST /api/mission`) has no multi-year safe
+array or 17-point run, so its files carry **no `risk` key**. That is the documented scope, not a fallback: show the
+risk card only when the key is present.
+
+```
+risk                        ranked sites' mission files only
+  delay_margin_h            consecutive safe landing hours starting at the headline hour (the site's operative safe
+                            series: safe within 100 m when that check ran for it, else safe on the point);
+                            1 = only the headline hour itself
+  delay_ladder [{slip_h, start_utc, safe, next_safe_utc}, ...]
+                            slips of 1, 6 and 24 h and 709 h (that row carries label "one lunation (29.53 days)",
+                            the spec's labelled assumption); next_safe_utc = the first safe hour at or after the
+                            slipped hour, null if none before the data ends (2030); when safe, the slipped hour itself
+  miss_table [{point, dx_m, dy_m, safe, fails}, ...]
+                            the 17 points within 100 m at the headline hour; null for sites the 100 m check never ran
+                            on. fails = the first rule the point fails, in the safe rule's order: "slope" (its slope
+                            over 100 m at or above 10 deg, council R3 option A), "sun at touchdown",
+                            "earth at touchdown", "earth for the mission", "battery"; null when the point is safe
+  words [sentence, ...]     show as is
+contact_plan
+  first_contact_utc         start of the first Earth-contact window at or after touchdown (touchdown itself when a
+                            window is already open); null only when Earth is never in view. Stamps follow the sky
+                            file's precision (seconds), like events.dte
+  windows [{start, end, covers}, ...]   the events.dte windows (exact same start/end) that contain touchdown, the
+                            mission's middle hour and its last hour; covers lists which of those moments, in that order
+  missing [name, ...]       the moments among touchdown / mid-mission / end with no Earth contact
+  longest_blackout_h        = summary.longest_earth_blackout_h
+dark_verdict [{start, end, hours, battery_start_Wh, battery_lowest_Wh, lasts}, ...]
+                            one entry per run of hours with the Sun at or under half (s <= 0.5), from the report's
+                            own battery_Wh series; start = the run's first hour, end = the first hour after it
+                            (exclusive); lasts = the level never drops below e_min inside the run. [] when the Sun
+                            never sets. Some run has lasts false exactly when summary.survives is false
+weak_battery                {capacity_factor 0.5, e_max_Wh, e_min_Wh, survives, dies_at_hour, label}
+                            the same mission through battery.simulate with half the capacity, the reserve scaled
+                            too (it stays 20% of a full battery, as battery.py defines it); panel and load
+                            unchanged; label marks it as an assumption
+words [sentence, ...]       the three blocks above in plain English, show as is; every survives/lasts sentence says
+                            "at best (sun-tracking panels)"
+confidence
+  skyline_shift_deg 0.02    the convergence study's bound (99% of directions within 0.02 deg)
+  sunset_shift_min, earthset_shift_min
+                            minutes the first sunset / first Earthset after touchdown moves when the whole skyline
+                            is raised and lowered by 0.02 deg (the larger of the two); null when that event is not
+                            in the mission
+  verdict_changes           true when either shift flips summary.safe_landing
+  checks, cannot_see        static sentences, show as is
+```
+
 Drawing the skyline view: plot `horizon_deg` against `theta_deg`, then the Sun track (`sun_az`, `sun_el`) and Earth track (`earth_az`, `earth_el`) on the same axes. `sun_clearance_deg` is how high the Sun stands above the skyline ("solar elevation", objective 4); `hours_to_sunset` answers "how much time remains before sunset or Earthset" (objective 3).
 
 ## The app's folder (`web/`)

@@ -138,3 +138,16 @@ def test_confidence_zero_shift_moves_nothing_and_a_known_rate_moves_12_minutes()
     assert len(c["checks"]) == 2 and len(c["cannot_see"]) == 2
     rep = site_report(SITE, H, D, ok, track([0.01] * 24, [2.0] * 24), 2.0, Battery(), 0.0)
     assert rep["summary"]["safe_landing"] and rep["confidence"]["verdict_changes"] is True   # 0.01 deg clear flips
+
+
+def test_every_failsafe_block_is_present_and_json_serialisable():
+    """Spec commit 4: the wiring end to end on synthetic data. One call to site_report carries every new block
+    (risk is score_sites' alone, so it is absent here), and the whole report survives json.dumps/loads."""
+    import json
+    rep = site_report(SITE, *flat(), track([1.0] * 48, [2.0] * 30 + [-2.0] * 18), 2.0, Battery(), 0.0)
+    for key in ("contact_plan", "dark_verdict", "weak_battery", "words", "confidence"):
+        assert key in rep
+    assert "risk" not in rep                                   # analyze-path files carry no risk block
+    back = json.loads(json.dumps(rep))
+    assert back["contact_plan"]["missing"] == ["end"] and back["weak_battery"]["capacity_factor"] == 0.5
+    assert len(back["words"]) == 3 and back["confidence"]["skyline_shift_deg"] == 0.02
