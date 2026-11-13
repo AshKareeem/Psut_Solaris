@@ -91,6 +91,7 @@ scripts/make_demo_sites.py  demo sites.csv around the Shackleton rim, until Step
 scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horizon_meta.json for Steps 3-4
 scripts/make_sky.py   Step 2: Sun and Earth positions per site and hour (SPICE) -> sky.npz
 scripts/validate_sky_skyfield.py  independent check of sky.npz with Skyfield
+scripts/validate_horizons.py  Step 2 checked against NASA JPL Horizons at every named site (Part 8)
 scripts/score_sites.py  Steps 3-4: visibility, safe landing dates, battery, mast, ranking, landing error -> results.json, sites/<id>.json
 scripts/events.py     sunrise/sunset, Earthrise/Earthset and DTE windows to the minute; Sun clearance above the skyline
 scripts/site_report.py  one site in full for the web app (skyline, tracks, events, verdict, reasons)
@@ -116,10 +117,10 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 130 passed
+python -m pytest -q                # expect: 133 passed
 ```
 
-Without the LOLA maps and SPICE kernels in `data/`, the five real-data checks are skipped (125 passed, 5 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%) and `analyze` end to end.
+Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (127 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
 
 ## Part 1: synthetic demo (no download needed)
 
@@ -253,6 +254,29 @@ Two sites: the Shackleton rim site, and the brightest NASA pixel within 30 km of
 - Before Nov 12 this used rough estimates (a yearly sine for the Sun, a libration band for Earth): Sun 0.92 / +0.4, Earth 0.85 / −3.8 at the rim. With the real SPICE sky the Earth bias drops from −3.8 to +0.6 points.
 - Each block's 100 pixels lie within 600 m and share the distant skyline, so they aren't 100 independent checks. The two sites, 9.8 km apart, are.
 
+## Part 8: validate the Sun and Earth against NASA JPL Horizons
+
+```
+python scripts/validate_horizons.py --sites named_sites.csv --out out/validate_horizons.json
+```
+
+[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) is the ephemeris service listed in the challenge's Resources tab. For every named site (IM-1, IM-2, the Shackleton rim, the crest 103 m away, the Shackleton–de Gerlache ridge, Apollo 11), the script asks the Horizons API where the Sun and Earth are, seen from that point on the Moon's surface:
+- at ten hours spread over 2026–2030;
+- and at the real landing hour of IM-1 (2024-02-22 23 UTC) and IM-2 (2025-03-06 17 UTC).
+
+Horizons settings:
+- an observer table centred on a surface point (`CENTER = 'coord@301'`), geodetic on the Moon's mean-Earth frame (the frame LOLA uses);
+- apparent azimuth and elevation, with no refraction (`APPARENT = 'AIRLESS'`);
+- times in UT.
+
+The same hours go through `make_sky()`, the code the pipeline uses. It fails if any difference exceeds 0.01°.
+
+Result (Nov 13, 2026): **124 positions, every one within 0.0003° of Horizons.**
+- Elevation: worst 0.000013° (Sun) and 0.000035° (Earth).
+- Azimuth: worst 0.000036° for Earth. For the Sun the worst is 0.000274°, at Apollo 11 with the Sun 89.4° up; that close to the zenith, azimuth is nearly undefined (it is a 0.000003° shift on the sky). Everywhere else it is within about 0.00001°.
+
+For scale, the Sun's radius is 0.27°. Two independent sources, Skyfield (`validate_sky_skyfield.py`, 0.00032° worst) and NASA's own JPL Horizons, agree with our SPICE sky. That leaves terrain as the only real source of error, and the convergence study (Part 4) and NASA's PGDA maps (Part 7) check that.
+
 ## References
 
 - Smith, D. E., et al. (2010). The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission. *Space Science Reviews*, 150, 209–241. (LOLA)
@@ -262,5 +286,6 @@ Two sites: the Shackleton rim site, and the brightest NASA pixel within 30 km of
 - Acton, C. H. (1996). Ancillary data services of NASA's Navigation and Ancillary Information Facility. *Planetary and Space Science*, 44(1), 65–70. (SPICE)
 - Folkner, W. M., Williams, J. G., & Boggs, D. H. (2008). The Planetary and Lunar Ephemeris DE 421. *IPN Progress Report* 42-178. (DE421 and the Moon's orientation)
 - Barker, M. K., et al. (2021). Improved LOLA elevation maps for south pole landing sites: Error estimates and their impact on illumination conditions. *Planetary and Space Science*, 203, 105119. https://doi.org/10.1016/j.pss.2020.105119 (why 20 m terrain near a site matters)
+- NASA JPL Solar System Dynamics, Horizons System (API: <https://ssd.jpl.nasa.gov/api/horizons.api>): <https://ssd.jpl.nasa.gov/horizons/> (independent check of every Sun and Earth position, Part 8)
 - NASA, Artemis overview for the Space Apps Challenge (landing site requirements: within 6° of the pole, slope under 10°, direct-to-Earth communication, land within 100 m): <https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf>
 - Software: [SpiceyPy](https://github.com/AndrewAnnex/SpiceyPy), [NumPy](https://numpy.org), [Numba](https://numba.pydata.org), [rasterio](https://rasterio.readthedocs.io), [pyproj](https://pyproj4.github.io/pyproj), [Skyfield](https://rhodesmill.org/skyfield) (independent sky check).
