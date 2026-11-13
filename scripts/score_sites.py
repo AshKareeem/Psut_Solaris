@@ -25,12 +25,13 @@ times). No weighted score: every number is a physical quantity.
   recommended mast  the shortest mast with at least one safe landing date (information only)
   ranking        one list per mast (top_sites_by_mast, site ids): sites within 6 deg of the pole, slope under 10 deg,
                  every ray complete at that mast and at least one safe date; most safe landing days first, then
-                 the least battery needed, then sites.csv order. The user picks the lander's mast (default 2 m).
+                 the most safe days on the site's own point (differs only within 100 m), then the least battery
+                 needed, then sites.csv order. The user picks the lander's mast (default 2 m).
   within 100 m   (--neighbours) a lander aimed at a site comes down anywhere within 100 m (NASA's landing accuracy),
-                 so a date is safe for the site only if it is safe at every point there. Where that was checked, the
-                 lists count those days instead, and a site with none leaves that mast's list;
-                 recommended_mast_100m_m is the shortest mast with such a date. On the demo grid this matters: no
-                 ranked site keeps a safe date within 100 m at 0 m.
+                 so a date is safe for the site only if it is safe at every point there. The lists then hold only
+                 checked sites (the first pass's lists, all checked by make_neighbours.py) and count those days; a
+                 site safe on its point but nowhere within 100 m stays, ranked below (0 days within 100 m).
+                 recommended_mast_100m_m is the shortest mast with such a date.
 Landing error (--neighbours): skylines at points within 100 m of the ranked sites (scripts/make_neighbours.py, then
 scripts/run_horizon.py). Each point uses its parent's sky, since 100 m moves the Sun and Earth by only 0.003 deg.
 
@@ -43,6 +44,7 @@ Usage:
 import argparse
 import csv
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -169,10 +171,11 @@ def battery_needed(met, e_max):
     return np.where(np.isfinite(need), need, np.nan)
 
 
-def ranking(rows, days, need_Wh):
-    """Site rows ordered by days (more first), then battery needed (less first), then sites.csv order."""
+def ranking(rows, days, on_target, need_Wh):
+    """Site rows ordered by days (more first; safe within 100 m when checked), then safe days on the site's own
+    point (more first), then battery needed (less first), then sites.csv order."""
     rows = np.asarray(rows, int)
-    return rows[np.lexsort((rows, need_Wh[rows], -days[rows]))].tolist()
+    return rows[np.lexsort((rows, need_Wh[rows], -on_target[rows], -days[rows]))].tolist()
 
 
 def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe):
@@ -237,7 +240,7 @@ def main():
     passes_gates = (lat <= GATE_LAT) & (slope < GATE_SLOPE)
     complete = ok.all(axis=2)                                   # [sites, masts]
     candidates = [np.flatnonzero(passes_gates & complete[:, m] & (n_safe[:, m] > 0)) for m in range(len(masts))]
-    by_mast = [ranking(c, n_safe[:, m], need_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
+    by_mast = [ranking(c, n_safe[:, m], n_safe[:, m], need_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
 
     days_100m = np.full((n_sites, len(masts)), np.nan)
     complete_100m = np.zeros((n_sites, len(masts)), bool)
@@ -257,10 +260,10 @@ def main():
         days_100m = np.where(checked[:, None], safe_days(safe_100m), np.nan)
         order_100m = best_dates(met | {"safe": safe_100m}, hours, a.dates)
         rec_100m = np.where(checked, recommended_mast(np.nan_to_num(days_100m), masts), np.nan)
-        key = np.where(checked[:, None], np.nan_to_num(days_100m), n_safe)
-        # a site whose dates all fail somewhere within 100 m is not safe to aim at, so it leaves that mast's list
-        candidates = [c[key[c, m] > 0] for m, c in enumerate(candidates)]
-        by_mast = [ranking(c, key[:, m], need_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
+        # only checked sites: an unchecked site's days on its own point would outrank a checked site's 100 m days
+        candidates = [c[checked[c]] for c in candidates]
+        by_mast = [ranking(c, np.nan_to_num(days_100m[:, m]), n_safe[:, m], need_Wh[:, m])[: a.top]
+                   for m, c in enumerate(candidates)]
     ranked = sorted({i for rows in by_mast for i in rows})
 
     results = {
@@ -277,8 +280,8 @@ def main():
                                      f"Sun and Earth in view, Earth in view for at least {a.min_dte_share:.0%} of the "
                                      f"{a.days}-day mission (no relay), and the battery never below {battery.e_min:g} Wh",
                 "ranking": "one list per mast height: most safe landing days (safe at every point within 100 m "
-                           "where that was checked; sites with none there are left out), then the least battery "
-                           "needed",
+                           "when that check ran; a site with none there stays, below the others), then the most "
+                           "safe days on the site's own point, then the least battery needed",
                 "battery_needed_Wh": "the most battery energy any safe landing hour draws: a full charge minus the "
                                      "lowest level during the mission (the battery model, so sunlight that comes back "
                                      f"partway counts); at most {battery.e_max - battery.e_min:g} Wh by the safe rule",
@@ -317,7 +320,9 @@ def main():
     (out / "results.json").write_text(json.dumps(results))
 
     detail = out / "sites"
-    detail.mkdir(exist_ok=True)
+    if detail.exists():                                # files from an earlier run would point at other sites
+        shutil.rmtree(detail)
+    detail.mkdir()
     for i in ranked:                                   # at the 100 m mast and date when that check found one
         use_100m = np.isfinite(rec_100m[i])
         m = masts.index(rec_100m[i] if use_100m else rec[i])

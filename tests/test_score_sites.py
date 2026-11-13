@@ -109,7 +109,7 @@ def test_ranking_per_mast_by_safe_days_then_battery_needed():
     days[[190, 210, 33, 13]] = [4, 499, 49, 49]
     bridge = np.zeros(300)
     bridge[[33, 13]] = [600.0, 300.0]
-    assert ranking([190, 210, 33, 13], days, bridge) == [210, 13, 33, 190]
+    assert ranking([190, 210, 33, 13], days, days, bridge) == [210, 13, 33, 190]
     assert np.isnan(recommended_mast(np.zeros((1, 4), int), [0.0, 2.0, 5.0, 10.0])[0])
     assert recommended_mast(np.array([[0, 0, 0, 192]]), [0.0, 2.0, 5.0, 10.0])[0] == 10.0
 
@@ -126,6 +126,12 @@ def test_battery_needed_counts_partial_sun_and_never_exceeds_what_a_safe_landing
     assert met["gap_h"][0, 0, 0] == 14 and need == 500.0    # 14 dark hours x 50 W = 700 Wh would be wrong
     assert need <= b.e_max - b.e_min
     assert np.isnan(battery_needed({"safe": np.zeros((1, 1, 3), bool), "lowest_Wh": np.zeros((1, 1, 3))}, 700.0)[0, 0])
+
+
+def test_sites_with_no_safe_day_within_100_m_stay_listed_by_their_days_on_target():
+    """Council R8: dropping them left the 2 m demo list with one site."""
+    within, on_target, need = np.array([18.0, 0, 0, 0]), np.array([79, 91, 219, 190]), np.full(4, 558.0)
+    assert ranking([0, 1, 2, 3], within, on_target, need) == [0, 2, 3, 1]
 
 
 def test_a_date_with_earth_in_view_for_too_little_of_the_mission_is_not_safe():

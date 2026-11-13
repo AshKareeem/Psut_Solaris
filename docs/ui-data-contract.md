@@ -18,8 +18,10 @@ meta
   default_mast_m 2, n_az, min_dte_share 0.5, earth_margin_deg, gates {lat_max_deg, slope_max_deg}, landing_error_m 100,
   lander {name, e_max_Wh, e_min_Wh, p_panel_W, p_load_W, bridge_hours, model, sources}
   definitions {safe_landing_date, ranking, battery_needed_Wh, default_mast, recommended_mast_m, fields}   (words, show as is)
-  top_sites_by_mast {"0.0": ["<site id>", ...], ...}   one list per mast: most safe days (within 100 m where
-                                                       checked), then the least battery_needed_Wh; no overall list
+  top_sites_by_mast {"0.0": ["<site id>", ...], ...}   one list per mast: most safe days (within 100 m when that
+                                                       check ran: then only checked sites, and a site with 0 days
+                                                       within 100 m stays below the others), then the least
+                                                       battery_needed_Wh; no overall list
 sites [ ... one per site, in sites.csv order ... ]
   id, lat, lon, x_m, y_m, slope_deg, passes_gates
   recommended_mast_m        shortest mast with a safe landing date at the point (null: none)
