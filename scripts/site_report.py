@@ -142,6 +142,57 @@ def failsafe_words(cp, dark, weak, battery, utc, hours):
     return words
 
 
+# The confidence block (spec commit 3): what the convergence study's skyline bound does to this mission.
+SKYLINE_SHIFT_DEG = 0.02   # the convergence study: every site within 0.02 deg in 99% of its directions
+CHECKS = ["Sun and Earth positions: 124 checked against NASA JPL Horizons, all within 0.0003 deg.",
+          "Sunlight: matches NASA's PGDA map at the Shackleton rim, correlation 0.92 (2 m best fit)."]
+CANNOT_SEE = ["Hazards smaller than the 20 m map, like the ~20 m crater IM-2 tipped into.",
+              "A tilted lander with fixed panels, like IM-1: survival here is an upper bound."]
+
+
+def first_set(clearance):
+    """Hours from the first sample to the first downward crossing (events.intervals); None if the body never sets
+    inside the mission."""
+    return next((end for _, end in intervals(np.asarray(clearance)) if end is not None), None)
+
+
+def shifted_clearances(H, track, earth_margin, delta):
+    """The mission's Sun and Earth clearances with the whole skyline shifted by delta degrees: the same
+    events.py functions on H + delta."""
+    sun_c = sun_clearance((H + delta)[None], track["sun_az"][None], track["sun_el"])[0]
+    earth_c = earth_clearance((H + delta)[None], track["earth_az"][None], track["earth_el"],
+                              track["earth_radius_deg"], earth_margin)[0]
+    return sun_c, earth_c
+
+
+def safe_landing_with(H, track, battery, earth_margin, delta):
+    """summary.safe_landing recomputed with the skyline shifted by delta: the same visibility and battery code."""
+    sun_c, earth_c = shifted_clearances(H, track, earth_margin, delta)
+    s = sun_fraction(sun_c, track["sun_radius_deg"])
+    _, death = simulate(s, battery)
+    return bool((s[0] > 0.5) and (earth_c[0] > 0) and (int(death) < 0))
+
+
+def confidence_block(H, track, battery, earth_margin, delta=SKYLINE_SHIFT_DEG):
+    """How much the first sunset and Earthset move, and whether the safe-landing verdict flips, when the skyline
+    is raised and lowered by delta (the larger shift of the two); plus the static checks and blind spots."""
+    def shift_min(pick):
+        base = pick(0.0)
+        if base is None:
+            return None
+        moved = [abs(t - base) * 60 for t in (pick(delta), pick(-delta)) if t is not None]
+        return round(max(moved), 1) if moved else None
+
+    sets = {d: shifted_clearances(H, track, earth_margin, d) for d in (0.0, delta, -delta)}
+    return {"skyline_shift_deg": delta,
+            "sunset_shift_min": shift_min(lambda d: first_set(sets[d][0])),
+            "earthset_shift_min": shift_min(lambda d: first_set(sets[d][1])),
+            "verdict_changes": bool(any(safe_landing_with(H, track, battery, earth_margin, d)
+                                        != safe_landing_with(H, track, battery, earth_margin, 0.0)
+                                        for d in (delta, -delta))),
+            "checks": list(CHECKS), "cannot_see": list(CANNOT_SEE)}
+
+
 def site_report(site, H, D, complete, track, mast, battery, earth_margin):
     """site: id, lat, lon, x_m, y_m; H, D, complete: [n_az] at this mast; track: the mission's hourly Sun and Earth
     (time_utc, sun_az, sun_el, earth_az, earth_el, sun_radius_deg, earth_radius_deg). Returns a JSON-ready dict."""
@@ -222,6 +273,7 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         "dark_verdict": (dark := dark_verdict_block(lit, battery_Wh, battery, utc)),
         "weak_battery": (weak := weak_battery_block(s, battery)),
         "words": failsafe_words(cp, dark, weak, battery, utc, hours),
+        "confidence": confidence_block(H, track, battery, earth_margin),
         "events": site_events(sun_c, earth_c, t0),
         "skyline": {"theta_deg": r(np.arange(H.size) * 360.0 / H.size), "horizon_deg": r(H, 3),
                     "blocker_km": r(D / 1e3), "complete": [bool(v) for v in complete]},

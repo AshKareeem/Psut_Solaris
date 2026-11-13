@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from scripts.battery import Battery
-from scripts.site_report import bearing, longest_span, site_report, weak_battery_block
+from scripts.site_report import bearing, confidence_block, longest_span, site_report, weak_battery_block
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 SITE = {"id": "t", "lat": -89.5, "lon": 0.0, "x_m": 0.0, "y_m": 15161.0}
@@ -121,3 +121,20 @@ def test_weak_battery_at_factor_1_reproduces_the_summary():
     assert wb["capacity_factor"] == 0.5 and wb["e_max_Wh"] == 350.0 and wb["e_min_Wh"] == 70.0
     assert wb["survives"] is False and wb["dies_at_hour"] == 5 and "assumption" in wb["label"]
     assert any("at best (sun-tracking panels)" in w for w in rep["words"])
+
+
+def test_confidence_zero_shift_moves_nothing_and_a_known_rate_moves_12_minutes():
+    """Spec commit 3. The Sun drops 0.1 deg/h through a flat skyline: sunset at t = 10.0 h (clearance 0.1 at hour
+    9, 0.0 at hour 10). Raising the skyline 0.02 deg: crossing at 9 + 0.08/0.1 = 9.8 h; lowering it:
+    10 + 0.02/0.1 = 10.2 h; both move sunset by 12 min, so the larger is 12.0. Earth never sets: null."""
+    t = track([1.0 - 0.1 * h for h in range(24)], [2.0] * 24)
+    H, D, ok = flat()
+    c0 = confidence_block(H, t, Battery(), 0.0, delta=0.0)
+    assert c0["sunset_shift_min"] == 0.0 and c0["earthset_shift_min"] is None and c0["verdict_changes"] is False
+    rep = site_report(SITE, H, D, ok, t, 2.0, Battery(), 0.0)
+    c = rep["confidence"]
+    assert c["skyline_shift_deg"] == 0.02 and c["sunset_shift_min"] == 12.0 and c["earthset_shift_min"] is None
+    assert c["verdict_changes"] is False                       # it dies in the long night with or without the shift
+    assert len(c["checks"]) == 2 and len(c["cannot_see"]) == 2
+    rep = site_report(SITE, H, D, ok, track([0.01] * 24, [2.0] * 24), 2.0, Battery(), 0.0)
+    assert rep["summary"]["safe_landing"] and rep["confidence"]["verdict_changes"] is True   # 0.01 deg clear flips
