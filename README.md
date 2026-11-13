@@ -25,6 +25,11 @@ python scripts/score_sites.py --horizon out/run/horizon --sky out/run/sky.npz --
 ```
 
 - The first two commands are independent; the last three add the landing-error check (17 points within 100 m of each top site).
+- **Lander presets ("Your lander" in the web app):** `scripts/profiles.py` lists them. Each is a set of mission requirements, never weights: the default Nova-C-class lander for 14 days, the same lander for 28 days, and a weak antenna that needs Earth 2° above the horizon. `scripts/run_profiles.py` runs the last four commands for every preset, with one shared landing-error run:
+
+  ```
+  python scripts/run_profiles.py --horizon out/run/horizon --sky out/run/sky.npz --sites sites.csv --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --out out/run/profiles
+  ```
 - The sky covers 2026–2030, the years CLPS and Artemis III plan to fly: 1,812 landing dates per site. On the 400 demo sites that's a 235 MB sky file, 12 s for the sky and about 2 minutes for the rest. Sites beyond about 36 km from the pole need `ldem_80s_20m` (1.85 GB, same PDS folder as the other maps).
 - **No weighted score.** Every number is physical:
   - A **safe landing date** has more than half the Sun visible and Earth in view in the landing hour, Earth in view for at least half the mission (`--min-dte-share`, no relay), and the battery never drops below its floor during the mission. `safe_landing_days` counts them: the official text's "launch delays ... alternative dates" as a number.
@@ -46,7 +51,7 @@ It runs the engine and SPICE for that one site and writes the same report as `si
 ### The web app (LunarWindow)
 
 ```
-python scripts/build_web.py --results out/run/results     # Moon textures + a copy of the results into web/
+python scripts/build_web.py --profiles out/run/profiles   # Moon textures + every preset's results into web/
 python scripts/serve.py                                     # http://127.0.0.1:8765/
 ```
 
@@ -100,7 +105,9 @@ scripts/battery.py    battery model (IoT)
 scripts/make_neighbours.py  points within 100 m of the top sites, for the landing-error check
 scripts/sensitivity.py  safe days vs battery size and antenna mask
 scripts/named_to_sites.py  named_sites.csv (IM-1, IM-2, Shackleton, ...) -> sites.csv with height and slope over 100 m
-scripts/build_web.py  Moon textures and a copy of the results for the web app
+scripts/profiles.py   lander presets (mission requirements, never weights) for "Your lander"
+scripts/run_profiles.py  Step 4 + landing-error check for every preset
+scripts/build_web.py  Moon textures and a copy of every preset's results for the web app
 scripts/serve.py      serves web/ and runs hand-set missions (POST /api/mission -> scripts/analyze.py)
 scripts/build_standalone.py  web/ as one double-click HTML file for an offline demo (BIT)
 web/                  the web app: index.html, assets/ (Moon, NASA PGDA basemaps), data/ (built by build_web.py)

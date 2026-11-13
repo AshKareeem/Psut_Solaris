@@ -46,3 +46,36 @@ def test_copy_results_refuses_another_version(tmp_path):
 def test_copy_results_fails_if_a_named_detail_file_is_missing(tmp_path):
     with pytest.raises(FileNotFoundError):
         copy_results(_results(tmp_path, 4, "sites/1.json"), tmp_path / "web/data")
+
+
+def _profile_results(root, pid, made_with):
+    d = root / pid
+    (d / "sites").mkdir(parents=True)
+    (d / "sites/1.json").write_text("{}")
+    (d / "results.json").write_text(json.dumps({"meta": {"version": 4, "profile": {"id": made_with}},
+                                                "sites": [{"id": "1", "detail_file": "sites/1.json"}]}))
+
+
+def test_copy_profiles_puts_the_default_at_the_top_and_indexes_every_preset(tmp_path):
+    from scripts.build_web import copy_profiles
+    from scripts.profiles import DEFAULT, PROFILES
+    for pid in PROFILES:
+        _profile_results(tmp_path / "profiles", pid, pid)
+    data = tmp_path / "web/data"
+    assert copy_profiles(tmp_path / "profiles", data) == len(PROFILES)
+    index = json.loads((data / "profiles.json").read_text())
+    assert [p["id"] for p in index][0] == DEFAULT and index[0]["results"] == "results.json" and index[0]["default"]
+    for p in index[1:]:
+        assert p["results"] == f"profiles/{p['id']}/results.json" and not p["default"]
+        assert (data / p["results"]).exists() and (data / f"profiles/{p['id']}/sites/1.json").exists()
+    assert (data / "sites/1.json").exists()
+
+
+def test_copy_profiles_refuses_results_made_with_another_preset(tmp_path):
+    from scripts.build_web import copy_profiles
+    from scripts.profiles import PROFILES
+    ids = list(PROFILES)
+    for pid in ids:
+        _profile_results(tmp_path / "profiles", pid, ids[0] if pid == ids[-1] else pid)
+    with pytest.raises(ValueError, match="made with preset"):
+        copy_profiles(tmp_path / "profiles", tmp_path / "web/data")

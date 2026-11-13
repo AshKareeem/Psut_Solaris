@@ -4,25 +4,31 @@
                               longitude -180..180 left to right, north up)
   web/assets/moon_relief.png  slopes of the CGI Moon Kit elevation map (LOLA, 4 px/deg): R = east slope,
                               G = north slope, 128 + SLOPE_SCALE x slope (rise over run), for the globe's lighting
-  web/data/results.json       scripts/score_sites.py output (version 4)
-  web/data/sites/<id>.json    scripts/site_report.py output for the ranked sites
+  web/data/results.json       scripts/score_sites.py output (version 4) for the default lander preset
+  web/data/sites/<id>.json    scripts/site_report.py output for its ranked sites
+  web/data/profiles/<id>/     the same two for every other lander preset (scripts/profiles.py)
+  web/data/profiles.json      the presets: id, label, description, results (path of its results.json), default
   web/data/named_sites.json   named_sites.csv (presets for the mission panel)
 
 Sources (download once into data/moon/): https://svs.gsfc.nasa.gov/4720
   lroc_color_poles_4k.tif, ldem_4.tif
 
 Usage:
-  python scripts/build_web.py --results out/pipe6/results
+  python scripts/build_web.py --profiles out/profiles        (scripts/run_profiles.py output)
 """
 import argparse
 import csv
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import numpy as np
 import rasterio
 from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.profiles import DEFAULT, PROFILES  # noqa: E402
 
 R_KM = 1737.4
 SLOPE_SCALE = 508.0          # slope 0.25 (14 deg) -> 127 counts; steeper slopes are rare at 7.6 km pixels
@@ -66,6 +72,23 @@ def copy_results(results_dir, data_dir):
     return len(files)
 
 
+def copy_profiles(profiles_dir, data_dir):
+    """Every preset's results (the default at data_dir, the others under data_dir/profiles/<id>) and the index
+    profiles.json; fails if a preset is missing or its results.json was made with another preset."""
+    index = []
+    for pid in [DEFAULT] + [p for p in PROFILES if p != DEFAULT]:     # the default first: it clears data_dir
+        src = Path(profiles_dir) / pid
+        made_with = json.loads((src / "results.json").read_text())["meta"].get("profile", {}).get("id")
+        if made_with != pid:
+            raise ValueError(f"{src / 'results.json'} was made with preset {made_with!r}, expected {pid!r}")
+        rel = Path() if pid == DEFAULT else Path("profiles") / pid
+        copy_results(src, data_dir / rel)
+        index.append({"id": pid, "label": PROFILES[pid]["label"], "description": PROFILES[pid]["description"],
+                      "results": (rel / "results.json").as_posix(), "default": pid == DEFAULT})
+    (data_dir / "profiles.json").write_text(json.dumps(index, indent=1))
+    return len(index)
+
+
 def named_sites(src, dst):
     """named_sites.csv as JSON for the mission panel's presets (coordinates, citation, real landing hour)."""
     with open(src, newline="") as f:
@@ -76,7 +99,7 @@ def named_sites(src, dst):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--results", required=True, help="folder with results.json and sites/ (score_sites.py --out)")
+    ap.add_argument("--profiles", required=True, help="scripts/run_profiles.py output: one folder per preset")
     ap.add_argument("--moon", default=str(ROOT / "data/moon"), help="folder with the two CGI Moon Kit files")
     ap.add_argument("--web", default=str(ROOT / "web"))
     a = ap.parse_args()
@@ -85,9 +108,10 @@ def main():
     (web / "assets").mkdir(parents=True, exist_ok=True)
     moon_color(moon / "lroc_color_poles_4k.tif", web / "assets/moon_color.jpg")
     moon_relief(moon / "ldem_4.tif", web / "assets/moon_relief.png")
-    n = copy_results(Path(a.results), web / "data")
+    n = copy_profiles(Path(a.profiles), web / "data")
     k = named_sites(ROOT / "named_sites.csv", web / "data/named_sites.json")
-    print(f"web/assets: moon_color.jpg, moon_relief.png; web/data: results.json + {n} site files, {k} named sites")
+    print(f"web/assets: moon_color.jpg, moon_relief.png; web/data: {n} lander presets (profiles.json), "
+          f"{k} named sites")
 
 
 if __name__ == "__main__":

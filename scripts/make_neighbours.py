@@ -1,6 +1,7 @@
 """Points within 100 m of the ranked sites, for the landing-error check (NASA: land within 100 m of the target).
 
-For each site in any list of results.json's meta.top_sites_by_mast: the site itself plus 8 directions at 50 m and
+For each site in any list of meta.top_sites_by_mast, in any of the results.json files given (one per lander preset,
+scripts/run_profiles.py), so one engine run serves them all: the site itself plus 8 directions at 50 m and
 100 m (17 points). Writes a sites.csv with an extra `parent` column (row of the parent site in the original sites.csv). Run the engine on it
 (scripts/run_horizon.py), then scripts/score_sites.py --neighbours. Height and slope are the parent's (display
 only: the engine takes the ground from the terrain). Within 6 deg of the pole the map scale is within 0.3% of
@@ -34,15 +35,16 @@ def offsets():
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sites", help="the sites.csv the results were made from")
-    ap.add_argument("results", help="results.json from scripts/score_sites.py (uses meta.top_sites_by_mast)")
+    ap.add_argument("results", nargs="+", help="results.json files from scripts/score_sites.py (uses "
+                                               "meta.top_sites_by_mast of each)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
     with open(a.sites, newline="") as f:
         rows = list(csv.DictReader(f))
     row_of = {row["id"]: i for i, row in enumerate(rows)}
-    lists = json.loads(Path(a.results).read_text())["meta"]["top_sites_by_mast"]
-    top = sorted({row_of[site_id] for ids in lists.values() for site_id in ids})
+    lists = [json.loads(Path(p).read_text())["meta"]["top_sites_by_mast"] for p in a.results]
+    top = sorted({row_of[site_id] for by_mast in lists for ids in by_mast.values() for site_id in ids})
     if not top:
         raise SystemExit("results.json ranks no sites")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)

@@ -71,7 +71,25 @@ Drawing the skyline view: plot `horizon_deg` against `theta_deg`, then the Sun t
 
 ## The app's folder (`web/`)
 
-`scripts/build_web.py --results <score_sites --out>` copies `results.json` and the detail files it names into `web/data/`, `named_sites.csv` into `web/data/named_sites.json`, and builds the Moon textures in `web/assets/`. The page fails loudly if a file is missing; it never shows stand-in data.
+`scripts/build_web.py --profiles <run_profiles --out>` copies every lander preset's `results.json` and the detail files it names into `web/data/`, `named_sites.csv` into `web/data/named_sites.json`, and builds the Moon textures in `web/assets/`. The page fails loudly if a file is missing; it never shows stand-in data.
+
+### Lander presets ("Your lander"): `web/data/profiles.json`
+
+A list, the default first:
+
+```json
+[{"id": "nova-c-14d", "label": "Nova-C-class lander, 14-day mission", "description": "...",
+  "results": "results.json", "default": true},
+ {"id": "nova-c-28d", "label": "Long mission: 28 days", "description": "...",
+  "results": "profiles/nova-c-28d/results.json", "default": false},
+ {"id": "weak-antenna", "label": "Weak antenna: Earth 2° above the horizon", "description": "...",
+  "results": "profiles/weak-antenna/results.json", "default": false}]
+```
+
+- **Each preset is a complete `results.json`**, the same schema as above. Choosing a preset means loading its file and redrawing the ranking, map, site panel and compare view from it. The browser computes nothing.
+- **Paths are relative to `web/data/`.** A preset's `detail_file` values (`sites/<id>.json`) are relative to *its own* `results.json` folder. For example, `nova-c-28d`'s site 190 is `data/profiles/nova-c-28d/sites/190.json`.
+- Each `results.json` names its preset in `meta.profile` (`id`, `label`, `description`, `args`). `meta.mission_days` and `meta.earth_margin_deg` change with the preset, so read them, never assume 14 and 0.
+- Show `label` in the dropdown and `description` under it. **No weights, no sliders:** the presets are mission requirements.
 
 ## Hand-set missions: `POST /api/mission` (`scripts/serve.py`)
 
