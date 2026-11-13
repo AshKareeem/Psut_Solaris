@@ -26,7 +26,8 @@ def _results(tmp_path, version, detail):
     d = tmp_path / "results"
     (d / "sites").mkdir(parents=True)
     (d / "results.json").write_text(json.dumps({"meta": {"version": version},
-                                                "sites": [{"id": "1", "detail_file": detail}, {"id": "2", "detail_file": None}]}))
+                                                "sites": [{"id": "1", "masts": {"2.0": {"detail_file": detail}}},
+                                                          {"id": "2", "masts": {"2.0": {"detail_file": None}}}]}))
     return d
 
 
@@ -53,7 +54,7 @@ def _profile_results(root, pid, made_with):
     (d / "sites").mkdir(parents=True)
     (d / "sites/1.json").write_text("{}")
     (d / "results.json").write_text(json.dumps({"meta": {"version": 4, "profile": {"id": made_with}},
-                                                "sites": [{"id": "1", "detail_file": "sites/1.json"}]}))
+                                                "sites": [{"id": "1", "masts": {"2.0": {"detail_file": "sites/1.json"}}}]}))
 
 
 def test_copy_profiles_puts_the_default_at_the_top_and_indexes_every_preset(tmp_path):

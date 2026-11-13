@@ -32,7 +32,7 @@ def test_report_explains_a_dark_spell_with_the_blocking_terrain():
     t["sun_az"][6:18] = 10.0                                  # behind the ridge for 12 hours
     t["sun_az"][:6] = t["sun_az"][18:] = 100.0
     rep = site_report(SITE, H, D, np.ones(360, bool), t, 2.0, Battery(), 0.0)
-    assert rep["summary"]["longest_dark_h"] == 12 and rep["summary"]["battery_needed_Wh"] == 600.0   # > the 560 Wh it can use
+    assert rep["summary"]["longest_dark_h"] == 12 and rep["summary"]["battery_used_Wh"] == 600.0   # > the 560 Wh it can use
     assert rep["summary"]["touchdown_sun"] and not rep["summary"]["survives"]   # 12 dark hours > 11.2 h bridge
     assert "8.2 km" in rep["why"][0] and "bearing 80 deg" in rep["why"][0]
     assert rep["events"]["sunlit"][0]["start"] is None and len(rep["events"]["sunlit"]) == 2

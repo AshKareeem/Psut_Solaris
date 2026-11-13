@@ -5,7 +5,7 @@
   web/assets/moon_relief.png  slopes of the CGI Moon Kit elevation map (LOLA, 4 px/deg): R = east slope,
                               G = north slope, 128 + SLOPE_SCALE x slope (rise over run), for the globe's lighting
   web/data/results.json       scripts/score_sites.py output (version 4) for the default lander preset
-  web/data/sites/<id>.json    scripts/site_report.py output for its ranked sites
+  web/data/sites/<id>_<mast>.json  scripts/site_report.py output: each ranked site's mission at each height
   web/data/profiles/<id>/     the same two for every other lander preset (scripts/profiles.py)
   web/data/profiles.json      the presets: id, label, description, results (path of its results.json), default
   web/data/named_sites.json   named_sites.csv (presets for the mission panel)
@@ -66,7 +66,7 @@ def copy_results(results_dir, data_dir):
         shutil.rmtree(data_dir)
     (data_dir / "sites").mkdir(parents=True)
     shutil.copy(results_dir / "results.json", data_dir / "results.json")
-    files = [s["detail_file"] for s in results["sites"] if s["detail_file"]]
+    files = [e["detail_file"] for s in results["sites"] for e in s["masts"].values() if e["detail_file"]]
     for f in files:
         shutil.copy(results_dir / f, data_dir / f)
     return len(files)
@@ -84,6 +84,7 @@ def copy_profiles(profiles_dir, data_dir):
         rel = Path() if pid == DEFAULT else Path("profiles") / pid
         copy_results(src, data_dir / rel)
         index.append({"id": pid, "label": PROFILES[pid]["label"], "description": PROFILES[pid]["description"],
+                      "payloads": PROFILES[pid]["payloads"],
                       "results": (rel / "results.json").as_posix(), "default": pid == DEFAULT})
     (data_dir / "profiles.json").write_text(json.dumps(index, indent=1))
     return len(index)

@@ -27,12 +27,17 @@ sites [ ... one per site, in sites.csv order ... ]
   recommended_mast_m        shortest mast with a safe landing date at the point (null: none)
   recommended_mast_100m_m   shortest mast with a date safe everywhere within 100 m (null: not checked or none)
   landing_error_points      points checked within 100 m (0: not checked)
-  detail_file               "sites/<id>.json" for ranked sites, else null
   masts {"0.0": {...}, "2.0": {...}, ...}
-    safe_landing_days       landing dates (00:00 UTC each day) with power and Earth at touchdown that survive the mission
-    best_dates [{start, f_both, longest_dark_h}, ...]   up to 3 safe dates, best first; [] if none
-    f_sun, f_earth, f_both  share of mission hours with the Sun up / Earth in view / both, on the best date (null: no safe date)
-    longest_dark_h          longest darkness on the best date: the cold soak
+    safe_landing_days       landing days with at least one safe landing hour (any hour of the day, UTC)
+    safe_landing_hours      the safe landing hours themselves
+    headline_start          "YYYY-MM-DDTHH": the landing every number below and detail_file describe: the best one
+                            safe within 100 m when that check found one, else the best on the exact point (null: none)
+    headline_within_100m    true when headline_start is safe at all 17 points within 100 m
+    detail_file             "sites/<id>_<mast>.json": that landing's full mission, for ranked sites with a safe landing
+                            at this mast; else null. Relative to this results.json's folder
+    best_dates [{start, f_both, longest_dark_h}, ...]   up to 3 safe dates on the exact point, best first; [] if none
+    f_sun, f_earth, f_both  share of mission hours with the Sun up / Earth in view / both, for headline_start (null: none)
+    longest_dark_h          longest darkness for headline_start: the cold soak
     battery_needed_Wh       the most any safe landing hour draws from the battery: e_max - lowest level (null: none)
     battery_lowest_Wh
     longest_survival_h      the longest any landing date lasts (= mission hours if some date survives)
@@ -42,14 +47,14 @@ sites [ ... one per site, in sites.csv order ... ]
     complete_within_100m    every ray of every point stayed on the map
 ```
 
-## sites/&lt;id&gt;.json
+## sites/&lt;id&gt;_&lt;mast&gt;.json (one mission per site and height)
 
 ```
 version 1, site {id, lat, lon, x_m, y_m, ...}, mast_m, earth_margin_deg
 mission {start_utc, hours}
 summary
   touchdown_sun, touchdown_earth, safe_landing, survives, dies_at_hour, battery_lowest_Wh,
-  f_sun, f_earth, f_both, longest_dark_h, battery_needed_Wh (e_max - battery_lowest_Wh), longest_earth_blackout_h,
+  f_sun, f_earth, f_both, longest_dark_h, battery_used_Wh (this mission: e_max - battery_lowest_Wh), longest_earth_blackout_h,
   marginal                  the Sun's centre or Earth's top clears the skyline by under 0.5 deg at touchdown
 verdict [sentence, ...]     plain English, show as is
 why [sentence, ...]         a marginal touchdown and what sets that skyline; for a body that never sets, its
@@ -87,9 +92,9 @@ A list, the default first:
 ```
 
 - **Each preset is a complete `results.json`**, the same schema as above. Choosing a preset means loading its file and redrawing the ranking, map, site panel and compare view from it. The browser computes nothing.
-- **Paths are relative to `web/data/`.** A preset's `detail_file` values (`sites/<id>.json`) are relative to *its own* `results.json` folder. For example, `nova-c-28d`'s site 190 is `data/profiles/nova-c-28d/sites/190.json`.
+- **Paths are relative to `web/data/`.** A preset's `detail_file` values (`sites/<id>_<mast>.json`, per mast) are relative to *its own* `results.json` folder. For example, `nova-c-28d`'s site 210 at 10 m is `data/profiles/nova-c-28d/sites/210_10.0.json`.
 - Each `results.json` names its preset in `meta.profile` (`id`, `label`, `description`, `args`). `meta.mission_days` and `meta.earth_margin_deg` change with the preset, so read them, never assume 14 and 0.
-- Show `label` in the dropdown and `description` under it. **No weights, no sliders:** the presets are mission requirements.
+- Show `label` in the dropdown, and `description` and `payloads` (the CLPS payload types the preset stands for) under it. **No weights, no sliders:** the presets are mission requirements.
 
 ## Hand-set missions: `POST /api/mission` (`scripts/serve.py`)
 

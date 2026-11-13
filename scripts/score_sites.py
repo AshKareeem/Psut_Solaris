@@ -229,7 +229,6 @@ def main():
     n_safe_h = met["safe"].sum(-1)
     starts = sky["time_utc"][: s.shape[-1] - hours + 1]         # every landing hour
     order = best_dates(met, hours, a.dates)                     # [dates, sites, masts]
-    at_best = {k: np.take_along_axis(v, order[0][..., None], axis=-1)[..., 0] for k, v in met.items()}
     need_Wh = battery_needed(met, battery.e_max)               # [sites, masts], worst safe landing hour
     survived_h = np.where(met["death_h"] < 0, hours, met["death_h"]).max(axis=-1)   # longest any date lasts
     rec = recommended_mast(n_safe, masts)
@@ -265,6 +264,11 @@ def main():
         by_mast = [ranking(c, np.nan_to_num(days_100m[:, m]), n_safe[:, m], need_Wh[:, m])[: a.top]
                    for m, c in enumerate(candidates)]
     ranked = sorted({i for rows in by_mast for i in rows})
+    # the headline landing per site and mast: the best one safe within 100 m where that check ran and found one,
+    # else the best on the exact point. Every per-mast number and that mast's mission file use it, so they agree.
+    use_100m = np.zeros((n_sites, len(masts)), bool) if order_100m is None else         np.take_along_axis(safe_100m, order_100m[0][..., None], axis=-1)[..., 0]
+    head = np.where(use_100m, order[0] if order_100m is None else order_100m[0], order[0])     # [sites, masts]
+    at_head = {k: np.take_along_axis(v, head[..., None], axis=-1)[..., 0] for k, v in met.items()}
 
     results = {
         "meta": {
@@ -287,8 +291,9 @@ def main():
                                      f"partway counts); at most {battery.e_max - battery.e_min:g} Wh by the safe rule",
                 "default_mast": "2 m: the best-fit observer height when the engine is checked against NASA's maps",
                 "recommended_mast_m": "the shortest mast with at least one safe landing date (information only)",
-                "fields": "per-mast numbers are for that mast's best landing date (best_dates[0]); null if it has "
-                          "none"},
+                "fields": "per-mast numbers are for that mast's headline landing (headline_start): the best one "
+                          "safe within 100 m where that check found one, else the best on the exact point; null if "
+                          "the mast has no safe landing. detail_file is that landing's full mission"},
             "top_sites_by_mast": {str(mast): ids[rows].tolist() for mast, rows in zip(masts, by_mast)}},
         "sites": []}
     for i in range(n_sites):
@@ -296,11 +301,14 @@ def main():
                 "x_m": r(float(sites["x"][i]), 1), "y_m": r(float(sites["y"][i]), 1), "slope_deg": r(slope[i], 1),
                 "passes_gates": bool(passes_gates[i]), "recommended_mast_m": r(rec[i], 1),
                 "recommended_mast_100m_m": r(rec_100m[i], 1), "landing_error_points": int(n_points[i]),
-                "detail_file": f"sites/{ids[i]}.json" if i in ranked else None, "masts": {}}
+                "masts": {}}
         for m, mast in enumerate(masts):
             best = n_safe[i, m] > 0
-            pick = lambda k, f=lambda v: v: f(at_best[k][i, m]) if best else None
+            pick = lambda k, f=lambda v: v: f(at_head[k][i, m]) if best else None
             site["masts"][str(mast)] = {
+                "headline_start": str(starts[head[i, m]])[:13] if best else None,
+                "headline_within_100m": bool(use_100m[i, m]) if best else None,
+                "detail_file": f"sites/{ids[i]}_{mast}.json" if best and i in ranked else None,
                 "safe_landing_days": int(n_safe[i, m]), "safe_landing_hours": int(n_safe_h[i, m]),
                 "safe_days_within_100m": None if not n_points[i] else int(days_100m[i, m]),
                 "best_dates": [{"start": str(starts[order[j, i, m]])[:13],
@@ -323,15 +331,17 @@ def main():
     if detail.exists():                                # files from an earlier run would point at other sites
         shutil.rmtree(detail)
     detail.mkdir()
-    for i in ranked:                                   # at the 100 m mast and date when that check found one
-        use_100m = np.isfinite(rec_100m[i])
-        m = masts.index(rec_100m[i] if use_100m else rec[i])
-        k = int((order_100m if use_100m else order)[0, i, m])
-        track = {key: sky[key][i, k: k + hours] for key in TRACK}
-        track |= {key: sky[key][k: k + hours] for key in ("time_utc", "sun_radius_deg", "earth_radius_deg")}
+    for i in ranked:                                   # every mast with a safe landing, at its headline landing
         info = {key: results["sites"][i][key] for key in ("id", "lat", "lon", "x_m", "y_m", "slope_deg")}
-        report = site_report(info, H[i, m], D[i, m], ok[i, m], track, masts[m], battery, a.earth_margin)
-        (detail / f"{info['id']}.json").write_text(json.dumps(report))
+        for m, mast in enumerate(masts):
+            f = results["sites"][i]["masts"][str(mast)]["detail_file"]
+            if f is None:
+                continue
+            k = int(head[i, m])
+            track = {key: sky[key][i, k: k + hours] for key in TRACK}
+            track |= {key: sky[key][k: k + hours] for key in ("time_utc", "sun_radius_deg", "earth_radius_deg")}
+            report = site_report(info, H[i, m], D[i, m], ok[i, m], track, mast, battery, a.earth_margin)
+            (out / f).write_text(json.dumps(report))
 
     print(f"{n_sites} sites x {len(masts)} masts x {len(starts)} landing hours ({a.days}-day missions) -> {out}")
     print(f"safe date: touchdown in Sun and Earth, Earth in view >= {a.min_dte_share:.0%} of the mission, battery "
