@@ -39,6 +39,22 @@ def test_report_explains_a_dark_spell_with_the_blocking_terrain():
     assert len(rep["hourly"]["sun_fraction"]) == 24 and len(rep["skyline"]["horizon_deg"]) == 360
 
 
+def test_a_good_site_says_why_and_a_close_touchdown_is_marginal():
+    """Council R10: why[] was empty for good sites; H9: site 210's Earth cleared the skyline by only 0.11 deg."""
+    H, D = np.zeros(360), np.full(360, 3000.0)
+    H[85:96] = 1.0                                             # a hill 3 km away toward Earth
+    sun = [1.0] * 12 + [0.6] * 12                              # never below the flat skyline; lowest at hour 12
+    rep = site_report(SITE, H, D, np.ones(360, bool), track(sun, [0.3] * 24), 2.0, Battery(), 0.0)
+    assert rep["summary"]["marginal"] and rep["summary"]["longest_dark_h"] == 0
+    marginal, sun_up, earth_up = rep["why"]
+    assert marginal.startswith("Marginal touchdown: the top of Earth's disc") and "0.25 deg above" in marginal
+    assert "3.0 km away" in marginal                           # the hill toward theta 90
+    assert sun_up.startswith("The Sun stays up all mission") and "2027-01-01T12" in sun_up
+    assert earth_up.startswith("Earth stays in view all mission")
+    rep = site_report(SITE, H, D, np.ones(360, bool), track([1.0] * 24, [2.0] * 24), 2.0, Battery(), 0.0)
+    assert not rep["summary"]["marginal"]
+
+
 @pytest.mark.skipif(not (DATA / "ldem_75s_240m.lbl").exists() or not (DATA / "kernels" / "de421.bsp").exists(),
                     reason="LOLA 240 m map or SPICE kernels missing")
 def test_analyze_any_coordinates_end_to_end():

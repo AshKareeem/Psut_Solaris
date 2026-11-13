@@ -49,10 +49,13 @@ version 1, site {id, lat, lon, x_m, y_m, ...}, mast_m, earth_margin_deg
 mission {start_utc, hours}
 summary
   touchdown_sun, touchdown_earth, safe_landing, survives, dies_at_hour, battery_lowest_Wh,
-  f_sun, f_earth, f_both, longest_dark_h, battery_needed_Wh (e_max - battery_lowest_Wh), longest_earth_blackout_h
+  f_sun, f_earth, f_both, longest_dark_h, battery_needed_Wh (e_max - battery_lowest_Wh), longest_earth_blackout_h,
+  marginal                  the Sun's centre or Earth's top clears the skyline by under 0.5 deg at touchdown
 verdict [sentence, ...]     plain English, show as is
-why [sentence, ...]         what blocks the Sun in the darkest spell and Earth in the longest blackout,
-                            with the distance and bearing of the terrain; a note if rays left the map
+why [sentence, ...]         a marginal touchdown and what sets that skyline; for a body that never sets, its
+                            closest pass and the terrain there; otherwise what blocks the Sun in the darkest
+                            spell and Earth in the longest blackout (distance and bearing); a note if rays left
+                            the map
 events
   sunlit [{start, end}], dte [{start, end}], both [{start, end}]
                             start/end to the minute; null = before/after the mission window

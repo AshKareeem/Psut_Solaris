@@ -12,6 +12,7 @@ from scripts.battery import levels, simulate
 from scripts.events import earth_clearance, site_events, skyline_at, sun_clearance, sun_fraction
 
 VERSION = 1
+MARGINAL_DEG = 0.5   # a touchdown clearance under this is marginal: small landing or terrain errors can hide the body
 
 
 def bearing(theta, lon):
@@ -31,15 +32,28 @@ def longest_span(flags):
     return best
 
 
-def blocked_by(H, D, theta, el, lon):
-    """Why a body at map direction theta and elevation el (degrees) is hidden, in words."""
+def horizon_there(H, D, theta):
+    """The skyline height (deg) toward map direction theta, and what forms it, in words."""
     j = int(round(theta * H.size / 360)) % H.size
     sky = float(skyline_at(H[None], np.array([[theta]]))[0, 0])
+    if sky <= 0:
+        return sky, "the Moon's own curvature"
+    return sky, f"terrain {D[j] / 1e3:.1f} km away" if D[j] >= 1000 else f"terrain {D[j]:.0f} m away"
+
+
+def blocked_by(H, D, theta, el, lon):
+    """Why a body at map direction theta and elevation el (degrees) is hidden, in words."""
+    sky, what = horizon_there(H, D, theta)
     where = f"bearing {bearing(theta, lon):.0f} deg"
     if sky <= 0:
         return f"it is below the Moon's own curvature ({where}, horizon {sky:.2f} deg)"
-    far = f"{D[j] / 1e3:.1f} km" if D[j] >= 1000 else f"{D[j]:.0f} m"
-    return f"terrain {far} away blocks it ({where}: skyline {sky:.2f} deg, centre of the body at {el:.2f} deg)"
+    return f"{what} blocks it ({where}: skyline {sky:.2f} deg, centre of the body at {el:.2f} deg)"
+
+
+def clears(H, D, theta, clearance, lon):
+    """How far a visible body clears the skyline toward theta, and what forms the skyline there, in words."""
+    sky, what = horizon_there(H, D, theta)
+    return f"{clearance:.2f} deg above the skyline (bearing {bearing(theta, lon):.0f} deg, set by {what} at {sky:.2f} deg)"
 
 
 def site_report(site, H, D, complete, track, mast, battery, earth_margin):
@@ -59,13 +73,15 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
     utc = lambda h: str(t0 + np.timedelta64(int(h), "h"))[:13]
     r = lambda a, n=2: [round(float(v), n) for v in a]
 
+    near = [name for name, up, c in (("the Sun's centre", lit[0], sun_c[0]), ("the top of Earth's disc", e[0], earth_c[0]))
+            if up and c < MARGINAL_DEG]
     summary = {
         "touchdown_sun": bool(lit[0]), "touchdown_earth": bool(e[0]), "safe_landing": bool(both[0] and survives),
         "survives": bool(survives), "dies_at_hour": None if survives else int(death),
         "battery_lowest_Wh": round(lowest, 1),
         "f_sun": round(float(lit.mean()), 3), "f_earth": round(float(e.mean()), 3), "f_both": round(float(both.mean()), 3),
         "longest_dark_h": int(dark_h), "battery_needed_Wh": round(battery.e_max - lowest, 1),
-        "longest_earth_blackout_h": int(quiet_h)}
+        "longest_earth_blackout_h": int(quiet_h), "marginal": bool(near)}
 
     side = lambda c: f"{abs(c):.2f} deg {'above' if c > 0 else 'below'} the skyline"
     verdict = [
@@ -82,6 +98,13 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         "Battery model: power = panel power x visible Sun, whatever the Sun's direction (a sun-tracking array), "
         "so survival is an upper bound for fixed panels."]
     why = []
+    if near:
+        body = "Sun" if near[0].startswith("the Sun") else "Earth"
+        az = float(track["sun_az" if body == "Sun" else "earth_az"][0])
+        c = float(sun_c[0] if body == "Sun" else earth_c[0])
+        why.append(f"Marginal touchdown: {' and '.join(near)} clears the skyline by under {MARGINAL_DEG} deg; "
+                   f"{'the Sun' if body == 'Sun' else 'Earth'} is " + clears(H, D, az, c, site["lon"])
+                   + ", so there is almost no margin for a landing error, a lower antenna or a later hour.")
     if dark_h:
         k = dark_start + dark_h // 2
         why.append(f"Darkest spell from {utc(dark_start)} UTC ({dark_h} h): "
@@ -90,6 +113,14 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         k = quiet_start + quiet_h // 2
         why.append(f"Longest Earth blackout from {utc(quiet_start)} UTC ({quiet_h} h): "
                    + blocked_by(H, D, float(track["earth_az"][k]), float(track["earth_el"][k]), site["lon"]) + ".")
+    if not dark_h:
+        k = int(np.argmin(sun_c))
+        why.append(f"The Sun stays up all mission: its closest pass, {utc(k)} UTC, is "
+                   + clears(H, D, float(track["sun_az"][k]), float(sun_c[k]), site["lon"]) + ".")
+    if not quiet_h:
+        k = int(np.argmin(earth_c))
+        why.append(f"Earth stays in view all mission: its closest pass, {utc(k)} UTC, is "
+                   + clears(H, D, float(track["earth_az"][k]), float(earth_c[k]), site["lon"]) + ".")
     if not complete.all():
         why.append(f"{int((~complete).sum())} of {complete.size} directions left the terrain map before the full "
                    "range: the skyline there may be too low.")
