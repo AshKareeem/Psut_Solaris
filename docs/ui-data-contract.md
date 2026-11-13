@@ -18,6 +18,8 @@ meta
   default_mast_m 2, n_az, min_dte_share 0.5, earth_margin_deg, gates {lat_max_deg, slope_max_deg}, landing_error_m 100,
   lander {name, e_max_Wh, e_min_Wh, p_panel_W, p_load_W, bridge_hours, model, sources}
   definitions {safe_landing_date, ranking, battery_needed_Wh, default_mast, recommended_mast_m, fields}   (words, show as is)
+  ranking_keys [{field, words, better}, ...]   the ranking's metrics in order ("more" or "less" is better); show them
+                                                as "How we rank"
   top_sites_by_mast {"0.0": ["<site id>", ...], ...}   one list per mast: most safe days (within 100 m when that
                                                        check ran: then only checked sites, and a site with 0 days
                                                        within 100 m stays below the others), then the least
@@ -30,6 +32,9 @@ sites [ ... one per site, in sites.csv order ... ]
   masts {"0.0": {...}, "2.0": {...}, ...}
     safe_landing_days       landing days with at least one safe landing hour (any hour of the day, UTC)
     safe_landing_hours      the safe landing hours themselves
+    rank                    place in this mast's list (top_sites_by_mast), 1 = best; null if not listed
+    rank_reason             plain sentence: the metric that puts it ahead of the next site and behind the one before,
+                            with both numbers (show as is); null if not listed
     headline_start          "YYYY-MM-DDTHH": the landing every number below and detail_file describe: the best one
                             safe within 100 m when that check found one, else the best on the exact point (null: none)
     headline_within_100m    true when headline_start is safe at all 17 points within 100 m
