@@ -93,6 +93,38 @@ def read_polar_dem(label_path, bounds=None):
     return PolarDEM(height=height, pixel=pixel, pole_row=center - r0, pole_col=center - c0)
 
 
+POLAR_PROJ4 = "+proj=stere +lat_0=-90 +lon_0=0 +k=1 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs"
+
+
+def read_polar_geotiff(path):
+    """Load a south-polar height GeoTIFF (e.g. a NASA Moon Trek window, scripts/moontrek.py) as a PolarDEM.
+
+    Fails fast unless the file uses this module's map (south polar stereographic on the 1737.4 km sphere, checked by
+    projecting points) with square, unrotated pixels. Heights must be metres above the 1737.4 km sphere, as LOLA's
+    are; the file's own metadata can't say so, so the caller vouches for it (Moon Trek: "Map values are referred
+    to a radius of 1737400 m").
+    """
+    import rasterio
+    from pyproj import CRS, Transformer
+
+    with rasterio.open(path) as src:
+        if src.crs is None:
+            raise ValueError(f"{path}: no map projection")
+        to_ours = Transformer.from_crs(src.crs, CRS.from_proj4(POLAR_PROJ4), always_xy=True)
+        for x, y in ((0.0, 0.0), (50e3, -30e3), (-120e3, 80e3)):
+            xo, yo = to_ours.transform(x, y)
+            if abs(xo - x) > 1e-3 or abs(yo - y) > 1e-3:
+                raise ValueError(f"{path}: not the south polar stereographic map on the 1737.4 km sphere")
+        t = src.transform
+        if t.b != 0 or t.d != 0 or abs(t.a + t.e) > 1e-9 or t.a <= 0:
+            raise ValueError(f"{path}: pixels must be square, north-up and unrotated (transform {tuple(t)[:6]})")
+        height = src.read(1).astype(np.float32)
+        if src.nodata is not None:
+            height[height == src.nodata] = np.nan
+    pixel = float(t.a)
+    return PolarDEM(height=height, pixel=pixel, pole_row=t.f / pixel - 0.5, pole_col=-t.c / pixel - 0.5)
+
+
 def map_half_width(label_path):
     """Distance (m) from the pole to the centre of the map's edge pixels, read from the label alone."""
     lbl = _read_label(Path(label_path))

@@ -97,6 +97,7 @@ scripts/run_horizon.py  batch run: horizon.npy, blocker.npy, complete.npy, horiz
 scripts/make_sky.py   Step 2: Sun and Earth positions per site and hour (SPICE) -> sky.npz
 scripts/validate_sky_skyfield.py  independent check of sky.npz with Skyfield
 scripts/validate_horizons.py  Step 2 checked against NASA JPL Horizons at every named site (Part 8)
+scripts/moontrek.py   NASA Moon Trek: 5 m LOLA terrain near a site (needles removed) and LROC NAC photos (Part 9)
 scripts/score_sites.py  Steps 3-4: visibility, safe landing dates, battery, mast, ranking, landing error -> results.json, sites/<id>.json
 scripts/events.py     sunrise/sunset, Earthrise/Earthset and DTE windows to the minute; Sun clearance above the skyline
 scripts/site_report.py  one site in full for the web app (skyline, tracks, events, verdict, reasons)
@@ -284,6 +285,27 @@ Result (Nov 13, 2026): **124 positions, every one within 0.0003° of Horizons.**
 
 For scale, the Sun's radius is 0.27°. Two independent sources, Skyfield (`validate_sky_skyfield.py`, 0.00032° worst) and NASA's own JPL Horizons, agree with our SPICE sky. That leaves terrain as the only real source of error, and the convergence study (Part 4) and NASA's PGDA maps (Part 7) check that.
 
+## Part 9: NASA Moon Trek terrain and imagery near the site
+
+```
+python scripts/moontrek.py --lat -89.79293 --lon -153.9246 --half-km 4.5 --out data/moontrek/site190_5m.tif
+python scripts/analyze.py --lat -89.79293 --lon -153.9246 --mast 2 --start 2028-09-02T00 --days 14 --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --near data/moontrek/site190_5m.tif --out out/analyze/site190_demo_5m.json
+python scripts/moontrek.py --lat -89.79293 --lon -153.9246 --half-km 9 --photo out/moontrek/site190_nac_wide.png
+```
+
+[Moon Trek](https://trek.nasa.gov/moon/) is a NASA resource listed in the challenge's Resources tab.
+
+- **Terrain.** `moontrek.py` downloads a window of Moon Trek's "LRO LOLA DEM, 87.5 deg v4, S Pole" through its ArcGIS image service:
+  - 5 m pixels, 4× finer than our 20 m map;
+  - the same map projection and the same 1,737.4 km reference sphere (checked by `horizon/dem.py: read_polar_geotiff`);
+  - the original pixels, on the service's own grid.
+
+  `analyze --near` uses it as the finest level: 5 m within 4 km of the site, then 20 m to 40 km, then 240 m.
+- **Agreement with our map.** Around site 190, Moon Trek's 5 m heights (averaged over each 20 m pixel) differ from the PDS 20 m map by a median of 1.2 m on slopes under 5°, 2.2 m at 5–10° (where landers land) and 8 m on crater walls over 20°. That is the same LOLA data, gridded at two resolutions.
+- **Needles.** This older product contains spikes from bad laser returns. Around site 190, 10 pixels stand over 100 m above their neighbours. One is a 210 m needle, 30 m wide, 582 m from the site, that would on its own invent a 7° skyline and a 4-hour shadow. `moontrek.py` replaces every pixel more than 50 m from its neighbourhood median (0.12% of pixels there), keeps the raw download, and records the count in a sidecar file. A 30 m limit gives the same verdict.
+- **Result.** The demo mission (site 190, 2 m, landing 2028-09-02 00:00 UTC) gets the same verdict on Moon Trek's 5 m terrain as on our 20 m map: Sun up 100%, Earth in view 97%, the lander survives. The 5 m slope at the landing point is 6.8° (8.2° on the 20 m map).
+- **Imagery.** `--photo` stitches Moon Trek's LROC Narrow Angle Camera south-pole mosaic around the site and circles the 100 m landing-error zone. The tile grid was checked against LOLA: Shackleton's shadowed interior is centred on LOLA's crater centre.
+
 ## References
 
 - Smith, D. E., et al. (2010). The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission. *Space Science Reviews*, 150, 209–241. (LOLA)
@@ -293,6 +315,7 @@ For scale, the Sun's radius is 0.27°. Two independent sources, Skyfield (`valid
 - Acton, C. H. (1996). Ancillary data services of NASA's Navigation and Ancillary Information Facility. *Planetary and Space Science*, 44(1), 65–70. (SPICE)
 - Folkner, W. M., Williams, J. G., & Boggs, D. H. (2008). The Planetary and Lunar Ephemeris DE 421. *IPN Progress Report* 42-178. (DE421 and the Moon's orientation)
 - Barker, M. K., et al. (2021). Improved LOLA elevation maps for south pole landing sites: Error estimates and their impact on illumination conditions. *Planetary and Space Science*, 203, 105119. https://doi.org/10.1016/j.pss.2020.105119 (why 20 m terrain near a site matters)
+- NASA JPL, Moon Trek: <https://trek.nasa.gov/moon/> (LRO LOLA DEM 87.5 deg v4 S Pole, 5 m, and the LRO NAC south-pole mosaic; Part 9)
 - NASA JPL Solar System Dynamics, Horizons System (API: <https://ssd.jpl.nasa.gov/api/horizons.api>): <https://ssd.jpl.nasa.gov/horizons/> (independent check of every Sun and Earth position, Part 8)
 - NASA, Artemis overview for the Space Apps Challenge (landing site requirements: within 6° of the pole, slope under 10°, direct-to-Earth communication, land within 100 m): <https://ntrs.nasa.gov/api/citations/20250009323/downloads/ArtemisOverview2025IntSPAPPSChallenge.pdf>
 - Software: [SpiceyPy](https://github.com/AndrewAnnex/SpiceyPy), [NumPy](https://numpy.org), [Numba](https://numba.pydata.org), [rasterio](https://rasterio.readthedocs.io), [pyproj](https://pyproj4.github.io/pyproj), [Skyfield](https://rhodesmill.org/skyfield) (independent sky check).
