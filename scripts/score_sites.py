@@ -54,7 +54,7 @@ from numba import njit, prange
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.battery import Battery, simulate_windows  # noqa: E402
 from scripts.events import earth_clearance, sun_clearance, sun_fraction  # noqa: E402
-from scripts.site_report import site_report  # noqa: E402
+from scripts.site_report import PROVENANCE, site_report  # noqa: E402
 
 GATE_LAT, GATE_SLOPE = -84.0, 10.0   # NASA's Artemis III reference: within 6 deg of the pole, slope under 10 deg
 TRACK = ("sun_az", "sun_el", "earth_az", "earth_el")
@@ -268,7 +268,7 @@ def main():
 
     results = {
         "meta": {
-            "version": 4, "sky_source": str(sky["script_version"]) + " (NASA SPICE, DE421)",
+            "version": 4, "provenance": PROVENANCE, "sky_source": str(sky["script_version"]) + " (NASA SPICE, DE421)",
             "span": {"first_start": str(starts[0])[:13], "last_start": str(starts[-1])[:13],
                      "n_days": -(-len(starts) // 24), "n_hours": len(starts)},
             "mission_days": a.days, "masts_m": masts, "default_mast_m": 2.0, "n_az": int(meta["n_az"]),

@@ -12,6 +12,10 @@ from scripts.battery import levels, simulate
 from scripts.events import earth_clearance, site_events, skyline_at, sun_clearance, sun_fraction
 
 VERSION = 1
+# The submission rules: generated code and data must acknowledge generation in text and metadata.
+PROVENANCE = ("Computed by the LunarWindow pipeline from NASA LOLA terrain and NASA SPICE (DE421) ephemerides. "
+              "Code written with AI assistance (Claude Code) and verified by the team with automated tests and a "
+              "comparison against NASA PGDA illumination maps.")
 MARGINAL_DEG = 0.5   # a touchdown clearance under this is marginal: small landing or terrain errors can hide the body
 
 
@@ -126,7 +130,7 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
                    "range: the skyline there may be too low.")
 
     return {
-        "version": VERSION, "site": site, "mast_m": mast, "earth_margin_deg": earth_margin,
+        "version": VERSION, "provenance": PROVENANCE, "site": site, "mast_m": mast, "earth_margin_deg": earth_margin,
         "mission": {"start_utc": utc(0), "hours": hours},
         "summary": summary, "verdict": verdict, "why": why,
         "events": site_events(sun_c, earth_c, t0),

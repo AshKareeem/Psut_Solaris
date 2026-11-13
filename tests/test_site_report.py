@@ -37,6 +37,7 @@ def test_report_explains_a_dark_spell_with_the_blocking_terrain():
     assert "8.2 km" in rep["why"][0] and "bearing 80 deg" in rep["why"][0]
     assert rep["events"]["sunlit"][0]["start"] is None and len(rep["events"]["sunlit"]) == 2
     assert len(rep["hourly"]["sun_fraction"]) == 24 and len(rep["skyline"]["horizon_deg"]) == 360
+    assert "AI assistance" in rep["provenance"]                # the rules: generation acknowledged in metadata
 
 
 def test_a_good_site_says_why_and_a_close_touchdown_is_marginal():
