@@ -137,6 +137,28 @@ body.calm .pulse-dot{animation:none}
 .explain{display:none;background:var(--panel2);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;color:var(--ink);font-size:.92rem;margin:10px 0}
 body.simple .explain{display:block}
 .col{display:flex;flex-direction:column;gap:18px;min-width:0}
+/* comparison and mission player side by side */
+.duo{display:grid;grid-template-columns:minmax(320px,.95fr) 1.15fr;gap:18px;align-items:start;margin-top:18px;scroll-margin-top:84px}
+#compareCard{position:sticky;top:calc(env(safe-area-inset-top,0px) + 78px);max-height:calc(100vh - 96px);overflow:auto}
+#compareCard th,#compareCard td{padding:7px 6px;font-size:.86rem}
+#compareCard td{white-space:nowrap;min-width:62px}
+#compareCard tr > th:first-child{white-space:normal;min-width:88px;max-width:104px;line-height:1.25}
+#compareCard th.cur,#compareCard td.cur{background:var(--accent-fill)}
+#compareCard th.cur{box-shadow:inset 0 2px 0 var(--accent)}
+.cmpsel{font-weight:600}
+@media (max-width:960px){.duo{grid-template-columns:1fr} #compareCard{position:static;max-height:none} .sidecol{order:2} #playerCard{order:1}}
+/* lander presets */
+#landerCard{margin-bottom:18px}
+.landerrow{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:8px 24px;align-items:start}
+@media (max-width:760px){.landerrow{grid-template-columns:1fr}}
+#landerSel{width:100%;margin-top:8px;padding:9px 12px;border-radius:8px;border:1px solid #3A4152;background:var(--panel2);color:var(--ink);font:inherit}
+#landerSel:disabled{opacity:.6}
+#landerDesc{margin:4px 0 0}
+.rank .linkbtn{display:inline;width:auto;padding:0;border-radius:0;background:none;text-align:inherit}
+.rank .linkbtn:hover{background:none}
+.emptyrank{padding:6px 0}
+.lmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.lmeta span{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:.8rem;color:var(--muted)}
 canvas{display:block;width:100%}
 .mapwrap{position:relative}
 #map{aspect-ratio:1/1;border-radius:10px;background:#000;touch-action:none;cursor:grab}
@@ -220,7 +242,7 @@ td.num{text-align:right}
 .vs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:26px}
 .vs .card .row{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:10px;font-size:.95rem}
 .vs .card .row span:nth-child(odd){color:var(--muted)}
-.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:26px}
+.trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:26px}
 .trust .big{font-size:2.2rem;font-weight:700;color:var(--accent)}
 .trust p{color:var(--muted);margin:6px 0 0}
 .limits{margin-top:18px;color:var(--muted);font-size:.95rem;max-width:80ch}
@@ -272,9 +294,9 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     </section>
     <div class="stats">
       <div class="stat"><div class="v num">0.92</div><div class="k">Match with NASA's own sunlight map (correlation, 100 map pixels)</div></div>
-      <div class="stat"><div class="v num">0.0003°</div><div class="k">Sun and Earth positions vs an independent astronomy library</div></div>
+      <div class="stat"><div class="v num">0.0003°</div><div class="k">Sun and Earth positions vs NASA JPL Horizons (124 checks)</div></div>
       <div class="stat"><div class="v num">1,440</div><div class="k">Directions in every site's skyline, out to 250 km</div></div>
-      <div class="stat"><div class="v num">108</div><div class="k">Automated tests passing</div></div>
+      <div class="stat"><div class="v num">140</div><div class="k">Automated tests passing</div></div>
     </div>
 
   </div>
@@ -288,6 +310,14 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         <label class="toggle"><input type="checkbox" id="simpleToggle"> Simple explanations</label>
       </div>
       <p class="err" id="loadErr" role="alert"></p>
+
+      <div class="card" id="landerCard">
+        <div class="landerrow">
+          <div><h3><label for="landerSel">1. Your lander</label></h3>
+            <select id="landerSel" aria-describedby="landerDesc" disabled><option>Loading…</option></select></div>
+          <div><p class="hint" id="landerDesc" aria-live="polite"></p><div class="lmeta" id="landerMeta"></div></div>
+        </div>
+      </div>
 
       <div class="grid">
         <div class="col">
@@ -309,11 +339,6 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             </div>
             <div class="explain">The background is NASA's map of how often each spot sees the Sun (or Earth), averaged over 18.6 years. Bright = often. Our tool goes further: it tells you about <em>your</em> mission dates.</div>
           </div>
-          <div class="card">
-            <h3 id="rankTitle">Best sites</h3>
-            <p class="hint" id="rankHint"></p>
-            <ol class="rank" id="rank"></ol>
-          </div>
         </div>
 
         <div class="col">
@@ -321,6 +346,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <div class="sitehead">
               <h3 id="siteTitle">Site</h3>
               <span class="where num" id="siteWhere"></span>
+              <a class="btn small" id="qmLink" target="_blank" rel="noopener">View in NASA Quickmap ↗</a>
               <button class="btn small addcmp" id="addCmp">Add to comparison</button>
             </div>
             <p class="hint" style="margin:10px 0 0">Panel and antenna height (2 m is the best fit to NASA's sunlight map; 5 m and 10 m are design requirements, no lander has flown a mast)</p>
@@ -331,32 +357,46 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <p class="hint" id="safeDef"></p>
             <div class="explain">Raising the solar panels and antenna lifts them above nearby hills. At the pole the Sun skims the horizon, so a few metres can turn a dark spot into a sunny one.</div>
           </div>
+        </div>
+      </div>
 
-          <div class="card" id="playerCard">
-            <div class="player-top">
-              <div><h3>Play the mission</h3><p class="hint" id="playHint" style="margin:0"></p></div>
-              <div class="seg" role="group" aria-label="Skyline view"><button data-view="follow" aria-pressed="true">Follow the Sun</button><button data-view="full" aria-pressed="false">Full 360°</button></div>
-            </div>
-            <div id="playerBody">
-              <p class="hint" id="heightNote"></p>
-              <ul class="story" id="story"></ul>
-              <div class="count" id="count"></div>
-              <div class="panowrap"><canvas id="pano" aria-label="The skyline seen from the site, with the Sun and Earth at the selected hour"></canvas><div class="panotip" id="panoTip" hidden></div></div>
-              <div class="controls">
-                <button class="play" id="playBtn" aria-label="Play">▶</button>
-                <div class="seg" role="group" aria-label="Playback speed"><button data-speed="1" aria-pressed="false">1 h</button><button data-speed="4" aria-pressed="true">4 h</button><button data-speed="12" aria-pressed="false">12 h</button></div>
-                <input type="range" id="scrub" min="0" max="335" value="0" aria-label="Mission hour">
-                <div class="clock num" id="clock"></div>
-              </div>
-              <canvas id="tline" aria-label="Sunlight, Earth contact and battery on the same playhead as the skyline; tap or drag to move through the mission"></canvas>
-              <p class="batline" id="batLine" aria-live="polite"></p>
-              <div class="explain">Grey is the terrain the lander sees; point at it to see how far away the hill is that sets the horizon. The orange disc is the Sun and the blue disc is Earth, drawn at the hour you pick. When the Sun sinks behind the grey, the panels stop charging. When Earth sinks, the lander can't talk home.</div>
-              <h3 style="margin-top:14px">Solar elevation</h3>
-              <p class="hint">The Sun's height (orange) against the terrain in its direction (grey). The gap between them is your power margin.</p>
-              <canvas id="elev" aria-label="Sun height against the terrain over the mission"></canvas>
-            </div>
-            <p class="note" id="playerNote" hidden></p>
+      <div class="duo" id="compare">
+        <div class="col sidecol">
+          <div class="card" id="rankCard">
+            <h3 id="rankTitle">Best sites</h3>
+            <p class="hint" id="rankHint"></p>
+            <ol class="rank" id="rank"></ol>
           </div>
+          <div class="card" id="compareCard">
+            <h3>Compare sites</h3>
+            <p class="hint" id="cmpLead">Add up to four sites with "Add to comparison". Tap a site's name here to play its mission beside it.</p>
+            <div class="tablewrap"><table id="cmp"></table></div>
+          </div>
+        </div>
+        <div class="card" id="playerCard">
+          <div class="player-top">
+            <div><h3>Play the mission</h3><p class="hint" id="playHint" style="margin:0"></p></div>
+            <div class="seg" role="group" aria-label="Skyline view"><button data-view="follow" aria-pressed="true">Follow the Sun</button><button data-view="full" aria-pressed="false">Full 360°</button></div>
+          </div>
+          <div id="playerBody">
+            <p class="hint" id="heightNote"></p>
+            <ul class="story" id="story"></ul>
+            <div class="count" id="count"></div>
+            <div class="panowrap"><canvas id="pano" aria-label="The skyline seen from the site, with the Sun and Earth at the selected hour"></canvas><div class="panotip" id="panoTip" hidden></div></div>
+            <div class="controls">
+              <button class="play" id="playBtn" aria-label="Play">▶</button>
+              <div class="seg" role="group" aria-label="Playback speed"><button data-speed="1" aria-pressed="false">1 h</button><button data-speed="4" aria-pressed="true">4 h</button><button data-speed="12" aria-pressed="false">12 h</button></div>
+              <input type="range" id="scrub" min="0" max="335" value="0" aria-label="Mission hour">
+              <div class="clock num" id="clock"></div>
+            </div>
+            <canvas id="tline" aria-label="Sunlight, Earth contact and battery on the same playhead as the skyline; tap or drag to move through the mission"></canvas>
+            <p class="batline" id="batLine" aria-live="polite"></p>
+            <div class="explain">Grey is the terrain the lander sees; point at it to see how far away the hill is that sets the horizon. The orange disc is the Sun and the blue disc is Earth, drawn at the hour you pick. When the Sun sinks behind the grey, the panels stop charging. When Earth sinks, the lander can't talk home.</div>
+            <h3 style="margin-top:14px">Solar elevation</h3>
+            <p class="hint">The Sun's height (orange) against the terrain in its direction (grey). The gap between them is your power margin.</p>
+            <canvas id="elev" aria-label="Sun height against the terrain over the mission"></canvas>
+          </div>
+          <p class="note" id="playerNote" hidden></p>
         </div>
       </div>
 
@@ -405,15 +445,6 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     </section>
   </div>
 
-  <section class="block" id="compare">
-    <div class="wrap">
-      <div class="eyebrow">Compare</div>
-      <h2 class="title">Side by side</h2>
-      <p class="lead" id="cmpLead">Add up to four sites from the planner, all shown at the height picked there.</p>
-      <div class="card" style="margin-top:20px"><div class="tablewrap"><table id="cmp"></table></div></div>
-    </div>
-  </section>
-
   <section class="block" id="moon">
     <div class="wrap">
       <div class="eyebrow">Why it's hard</div>
@@ -433,10 +464,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       <div class="eyebrow">Why trust it</div>
       <h2 class="title">Checked against NASA, and against ourselves</h2>
       <div class="trust">
-        <div class="card"><div class="big num">0.92</div><h3>Matches NASA's sunlight map</h3><p>Our skylines reproduce NASA's long-term sunlight map pixel by pixel around Shackleton's rim (correlation 0.92 at a 2 m mast, average difference +0.4 points).</p></div>
-        <div class="card"><div class="big num">0.0003°</div><h3>Sun and Earth positions</h3><p>From NASA's SPICE toolkit, in the same Moon frame as the terrain maps, and confirmed by a second, independent library (Skyfield).</p></div>
+        <div class="card"><div class="big num">0.92</div><h3>Matches NASA's sunlight map</h3><p>Our skylines reproduce NASA's long-term sunlight map pixel by pixel around Shackleton's rim (correlation 0.92 at a 2 m height, average difference +0.1 points, 94% of pixels within 10 points).</p></div>
+        <div class="card"><div class="big num">0.0003°</div><h3>Sun and Earth positions</h3><p>From NASA's SPICE toolkit, in the same Moon frame as the terrain maps. Checked against NASA JPL Horizons at 124 positions (six named sites, 2026–2030 and the IM-1 and IM-2 landing hours) and against a second library (Skyfield).</p></div>
+        <div class="card"><div class="big num">5 m</div><h3>Confirmed on NASA Moon Trek terrain</h3><p>Our demo site gives the same verdict on Moon Trek's 5 m LOLA map, four times finer than ours. On the way we found and removed a 210 m spike in that map that would have faked a 4-hour shadow.</p></div>
         <div class="card"><div class="big num">50/50</div><h3>Terrain and sky line up</h3><p>A fake Sun placed just behind a test hill comes out hidden, and just above it comes out visible, in all 50 joint tests.</p></div>
-        <div class="card"><div class="big num">108</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
+        <div class="card"><div class="big num">140</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
       </div>
       <p class="limits"><strong>Honest limits.</strong> Battery values follow public information about Intuitive Machines' Nova-C lander, with an estimated load, and assume panels that track the Sun, so survival is an upper bound for fixed panels. NASA doesn't publish the observer height of its map, so the 2 m match is a best fit. Every number on this page comes from the team's pipeline; the page computes nothing itself.</p>
     </div>
@@ -446,7 +478,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 <footer id="about">
   <div class="wrap">
     <div class="row"><strong style="color:var(--ink)">LunarWindow</strong> · Team Psut_Solaris · NASA Space Apps Challenge 2026</div>
-    <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · Battery values from public Nova-C information.</div>
+    <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · NASA JPL Horizons (Sun and Earth check) · NASA Moon Trek (5 m LOLA terrain, LROC NAC images) · LROC QuickMap (site views) · NASA SVS CGI Moon Kit (globe) · Battery values from public Nova-C information.</div>
     <div>An independent student project, not affiliated with or endorsed by NASA.</div>
     <div class="row"><label class="toggle" style="margin:0"><input type="checkbox" id="motionToggle"> Reduce motion</label></div>
   </div>
@@ -476,35 +508,58 @@ for (const k in BASEMAPS){ const im = new Image(); im.src = BASEMAPS[k].src; im.
 /* ---------------- loading ----------------
    One path: results.json (scripts/score_sites.py, version 4) and sites/<id>.json (scripts/site_report.py, version 1),
    served from the same folder as this page. The page computes no physics: it only indexes and draws these files. */
-const RESULTS = "data/results.json", NAMED = "data/named_sites.json";
-function start(d){
+const DATA_ROOT = "data/", PROFILES_FILE = DATA_ROOT + "profiles.json", NAMED = DATA_ROOT + "named_sites.json";
+let PROFILES = [], PROFILE = null, DATA_BASE = DATA_ROOT, loadToken = 0;   // DATA_BASE = the folder of the loaded preset's results.json
+function start(d, keep){
   if (!d.meta || d.meta.version !== 4 || !Array.isArray(d.sites))
     throw new Error(`it is not version 4 from scripts/score_sites.py (found version ${d.meta ? d.meta.version : "none"})`);
-  DATA = d; SITES = d.sites; BYID = new Map(SITES.map(s => [String(s.id), s])); compare = [];
-  selMast = Number(d.meta.default_mast_m);
+  DATA = d; SITES = d.sites; BYID = new Map(SITES.map(s => [String(s.id), s]));
+  // switching lander keeps what the user was looking at: same height, same site, same compared sites (matched by id)
+  compare = keep ? keep.compare.map(id => BYID.get(id)).filter(Boolean) : [];
+  selMast = keep && d.meta.masts_m.map(Number).includes(keep.mast) ? keep.mast : Number(d.meta.default_mast_m);
   const b = $("dataBadge"), sp = d.meta.span;
   b.className = "badge real"; b.textContent = `Real data · landings ${sp.first_start.slice(0, 10)} to ${sp.last_start.slice(0, 10)}`;
   b.title = `Sky: ${d.meta.sky_source} · Lander: ${d.meta.lander.name}`;
   $("rankHint").textContent = "Ranking: " + d.meta.definitions.ranking + ".";
   $("safeDef").textContent = "A safe landing date means " + d.meta.definitions.safe_landing_date + ".";
   fitMap(); if (window.__globeRefresh) window.__globeRefresh();
-  select(topSites()[0] || SITES[0]);
+  // keep the site the user was viewing only if it has a safe landing for this lander; else open the new list's best
+  const kept = keep && BYID.get(keep.sel), keepIt = kept && mastEntry(kept, selMast).safe_landing_days > 0;
+  select(keepIt ? kept : topSites()[0] || kept || SITES[0]);
   drawCompare();
+  // the hand-set mission form follows the preset's own mission length and Earth margin
+  $("mDays").value = d.meta.mission_days; $("mMargin").value = d.meta.earth_margin_deg;
   fillMission("selected");
 }
 function fail(msg){ $("loadErr").textContent = msg; const b = $("dataBadge"); b.className = "badge sample"; b.textContent = "No data loaded"; }
-async function loadDetail(s){
-  if (s._detail || !s.detail_file) return;
-  const r = await fetch("data/" + s.detail_file);
-  if (!r.ok) throw new Error(`couldn't load ${s.detail_file} (HTTP ${r.status})`);
+async function loadDetail(s, m){   // the mission file of site s at height m (one per height; null when it has no safe landing)
+  const f = mastEntry(s, m).detail_file, k = mk(m);
+  s._detail = s._detail || {};
+  if (!f || s._detail[k]) return;
+  const r = await fetch(DATA_BASE + f);   // relative to this preset's results.json
+  if (!r.ok) throw new Error(`couldn't load ${f} (HTTP ${r.status})`);
   const d = await r.json();
-  if (d.version !== 1) throw new Error(`${s.detail_file} is not version 1 from scripts/site_report.py`);
-  s._detail = d;
+  if (d.version !== 1) throw new Error(`${f} is not version 1 from scripts/site_report.py`);
+  s._detail[k] = d;
+}
+function showDetail(){   // load the selected site's mission at the selected height, then redraw
+  const s = sel, m = selMast;
+  loadDetail(s, m).then(() => { if (sel === s && selMast === m) renderSite(); })
+    .catch(err => { if (sel === s){ $("playerNote").textContent = "Couldn't load the hour-by-hour file: " + err.message; } });
 }
 
 /* ---------------- helpers ---------------- */
 const masts = () => DATA.meta.masts_m.map(Number);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
 const mastEntry = (s, m) => s.masts[mk(m)];
+// NASA LROC Quickmap (challenge Resources tab), south polar view (proj=17) of a 12 x 6 km box around map x, y (m);
+// format taken from a link Quickmap itself produced, centred on site 190 (x -2760, y -5640)
+const QM_DEFS = "N4IgzGCMAsIFygPYAcCGBjAlgFwJ70gF9Cg";
+const quickmapUrl = (x, y) => `https://quickmap.lroc.im-ldi.com/?prjExtent=${x - 6000}%2C${y - 3000}%2C${x + 6000}%2C${y + 3000}` +
+  `&earthShadowEnabled=true&proj=17&stack=3314&defs=${QM_DEFS}`;
+// shortest height with a safe landing: within 100 m where that check ran, else on the exact point; null if none
+// (never Number(null), which is 0 and would mark 0 m as safe)
+const shortestSafe = s => { const r = s.landing_error_points ? s.recommended_mast_100m_m : s.recommended_mast_m; return r == null ? null : Number(r); };
 const topSites = () => DATA.meta.top_sites_by_mast[mk(selMast)].map(id => BYID.get(String(id)));
 const safeDays = e => e.safe_days_within_100m != null ? e.safe_days_within_100m : e.safe_landing_days;   // the ranking key in score_sites.py
 const years = () => `${DATA.meta.span.first_start.slice(0, 4)}–${DATA.meta.span.last_start.slice(0, 4)}`;
@@ -592,7 +647,13 @@ function drawMap(){
 function buildRank(){
   const ol = $("rank"), top = topSites(); ol.innerHTML = "";
   $("rankTitle").textContent = `Best sites at a ${selMast} m height`;
-  if (!top.length){ ol.innerHTML = `<li class="hint">No site makes the list at ${selMast} m: none has a safe landing date (everywhere within 100 m of the target, where that was checked). Try a taller height.</li>`; return; }
+  if (!top.length){
+    const taller = masts().filter(m => m > selMast && (DATA.meta.top_sites_by_mast[mk(m)] || []).length);
+    ol.innerHTML = `<li class="hint emptyrank"><strong>No site keeps this lander alive at this height</strong> (${selMast} m).` +
+      (taller.length ? ` Try ${taller.map(m => `<button class="linkbtn" data-mast="${m}">${m} m</button>`).join(" or ")}.` : " No taller height works for this lander either.") + `</li>`;
+    ol.querySelectorAll("[data-mast]").forEach(b => b.onclick = () => setMast(+b.dataset.mast));
+    return;
+  }
   top.forEach((s, i) => {
     const e = mastEntry(s, selMast), li = document.createElement("li"), b = document.createElement("button"); b.dataset.id = s.id;
     const sub = e.safe_days_within_100m != null ? `${e.safe_landing_days} safe days on target · ${e.safe_days_within_100m} within 100 m` : `${e.safe_landing_days} safe days on target`;
@@ -604,33 +665,32 @@ function buildRank(){
 
 /* ---------------- site ---------------- */
 function select(s){
-  sel = s; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap();
-  loadDetail(s).then(() => { if (sel === s) renderSite(); })
-    .catch(err => { if (sel === s){ $("playerNote").textContent = "Couldn't load the hour-by-hour file: " + err.message; } });
+  sel = s; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail();
 }
-function setMast(m){ selMast = m; renderSite(); buildRank(); drawMap(); drawCompare(); }
+function setMast(m){ selMast = m; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); }
 function renderSite(){
   const s = sel, e = mastEntry(s, selMast);
   $("siteTitle").textContent = "Site " + s.id;
   $("siteWhere").textContent = `${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}° · slope ${fmt(s.slope_deg, 1)}°`;
+  $("qmLink").href = quickmapUrl(s.x_m, s.y_m);
   const mb = $("masts"); mb.innerHTML = "";
   masts().forEach(m => { const b = document.createElement("button"); b.setAttribute("aria-pressed", m === selMast);
-    b.innerHTML = `${m} m${Number(s.recommended_mast_m) === m ? '<span class="rec">shortest safe</span>' : ""}`;
+    b.innerHTML = `${m} m${shortestSafe(s) === m ? '<span class="rec">shortest safe</span>' : ""}`;
     b.onclick = () => setMast(m); mb.appendChild(b); });
   $("addCmp").disabled = compare.includes(s) || compare.length >= 4;
   $("addCmp").textContent = compare.includes(s) ? "In comparison" : "Add to comparison";
   $("verdict").textContent = verdict(s, e);
   const tile = ([k, v, c]) => `<div class="tile ${c}"><div class="v num">${v}</div><div class="k">${k}</div></div>`;
-  const best = e.best_dates.length > 0;
+  const best = e.headline_start != null;
   const tiles = [
     ["Safe landing days", `${e.safe_landing_days} of ${DATA.meta.span.n_days}`, ""],
     ["Safe if you miss by up to 100 m", e.safe_days_within_100m == null ? "not checked" : e.safe_days_within_100m + " days", ""],
   ];
   if (best) tiles.push(
     ["Sunlit", pct(e.f_sun), "sun"], ["Earth in view", pct(e.f_earth), "earth"], ["Sun and Earth together", pct(e.f_both), ""],
-    ["Longest darkness (cold soak)", e.longest_dark_h + " h", ""], ["Battery needed (worst safe landing)", Math.round(e.battery_needed_Wh) + " Wh", ""]);
+    ["Longest darkness (cold soak)", e.longest_dark_h + " h", ""], ["Battery needed, worst safe landing of " + years(), Math.round(e.battery_needed_Wh) + " Wh", ""]);
   $("tiles").innerHTML = tiles.map(tile).join("");
-  $("tilesNote").textContent = best ? `Percentages and darkness are for the best landing date at the exact point, ${hourTxt(e.best_dates[0].start)}, over ${DATA.meta.mission_days} days.` : "";
+  $("tilesNote").textContent = best ? `Sunlit, Earth and darkness are for the landing played below: ${hourTxt(e.headline_start)}, ${DATA.meta.mission_days} days${e.headline_within_100m ? ", safe within 100 m" : ", exact point"}. Battery needed is the most any safe landing in ${years()} draws.` : "";
   renderPlayerHead();
   drawPlayer();
 }
@@ -638,15 +698,17 @@ function verdict(s, e){
   const G = DATA.meta.gates;
   if (!s.passes_gates) return `Not a candidate: ${s.slope_deg >= G.slope_max_deg ? `the ground slopes ${fmt(s.slope_deg, 1)}°, too steep to land on (limit ${G.slope_max_deg}°)` : "it is more than 6° from the pole"}.`;
   if (!e.complete) return `At a ${selMast} m height part of this site's horizon runs off the terrain map, so it isn't ranked.`;
-  const other = s.recommended_mast_m == null ? " No height we checked has one." : Number(s.recommended_mast_m) !== selMast ? ` The shortest height with a safe date on the exact point is ${s.recommended_mast_m} m.` : "";
+  const rs = shortestSafe(s), where = s.landing_error_points ? "within 100 m" : "on the exact point";
+  const other = rs == null ? ` No height we checked has a safe date ${where}.` : rs !== selMast ? ` The shortest height with a safe date ${where} is ${rs} m.` : "";
   if (!e.safe_landing_days) return `At a ${selMast} m height, no landing day in ${years()} is safe here.${other}`;
   let t = `At a ${selMast} m height, ${e.safe_landing_days} of ${DATA.meta.span.n_days} landing days in ${years()} are safe here`;
   t += e.safe_days_within_100m == null ? "." : `, and ${e.safe_days_within_100m} stay safe wherever the lander touches down within 100 m.`;
-  return t + ` Best dates: ${e.best_dates.map(x => x.start.slice(0, 10)).join(", ")}.${other}`;
+  const dates = (e.best_dates_within_100m && e.best_dates_within_100m.length) ? e.best_dates_within_100m : e.best_dates.map(x => x.start);
+  return t + ` Best dates: ${dates.map(x => x.slice(0, 10)).join(", ")}.${other}`;
 }
 
 /* ---------------- player (draws sites/<id>.json as given) ---------------- */
-const playingDetail = () => custom || (sel && sel._detail);
+const playingDetail = () => custom || (sel && sel._detail && sel._detail[mk(selMast)]);
 const lander = () => custom ? { e_max_Wh: custom.mission_inputs.e_max_Wh, e_min_Wh: custom.mission_inputs.e_min_Wh } : DATA.meta.lander;
 function series(){
   const d = playingDetail(); if (!d) return null;
@@ -656,7 +718,15 @@ function series(){
 function renderPlayerHead(){
   const s = sel, d = playingDetail();
   $("playerBody").hidden = !d; $("playerNote").hidden = !!d;
-  if (!d){ $("playerNote").textContent = s.detail_file ? `Loading ${s.detail_file}…` : "Hour-by-hour data is precomputed for the ranked sites only. Pick one from Best sites."; return; }
+  if (!d){
+    $("playHint").textContent = "";   // nothing is playing: don't leave the previous mission's date and length here
+    const f = mastEntry(s, selMast).detail_file;
+    $("playerNote").textContent = f ? `Loading ${f}…`
+      : !mastEntry(s, selMast).safe_landing_days ? `No safe landing here at ${selMast} m, so there is no mission to play. Pick a height marked safe, or a site from Best sites.`
+      : topSites().length ? "Hour-by-hour data is precomputed for the ranked sites only. Pick one from Best sites."
+      : `Hour-by-hour data is precomputed for the ranked sites only, and no site is ranked for this lander at ${selMast} m.`;
+    return;
+  }
   $("scrub").max = d.mission.hours - 1; $("scrub").value = cursor;
   $("playHint").textContent = `${custom ? "Your mission · " : ""}Landing ${hourTxt(d.mission.start_utc)} · ${d.mast_m} m height · ${+(d.mission.hours / 24).toFixed(1)} days`;
   if (custom){
@@ -665,9 +735,10 @@ function renderPlayerHead(){
       `(${st.slope_deg < G.slope_max_deg ? "within" : "steeper than"} the ${G.slope_max_deg}° landing limit), terrain ${st.terrain.join(" + ")}. Pick a site from Best sites to go back.`;
     listInto($("story"), d.verdict.concat(d.why)); return;
   }
-  const e = mastEntry(s, d.mast_m), within = (e.best_dates_within_100m || [])[0] === d.mission.start_utc;
-  $("heightNote").textContent = (d.mast_m !== selMast ? `This mission is precomputed at ${d.mast_m} m; the numbers above are for ${selMast} m. ` : "") +
-    (within ? "It starts on the best date that stays safe wherever the lander touches down within 100 m." : "It starts on the best landing date at the exact point.");
+  const e = mastEntry(s, selMast);
+  $("heightNote").textContent = e.headline_within_100m
+    ? "The landing shown above: the best date that stays safe wherever the lander touches down within 100 m."
+    : "The landing shown above: the best date on the exact point (no date here stays safe at every point within 100 m).";
   listInto($("story"), d.verdict.concat(d.why));
 }
 function countdown(wins, t){   // wins: sorted {start, end}; null = before/after the mission
@@ -850,7 +921,7 @@ function fillMission(key){
   if (key === "selected"){
     const e = mastEntry(sel, selMast);
     $("mLat").value = sel.lat; $("mLon").value = sel.lon; $("mMast").value = selMast;
-    setStart(e.best_dates.length ? e.best_dates[0].start : DATA.meta.span.first_start);
+    setStart(e.headline_start || DATA.meta.span.first_start);
   } else {
     const n = NAMED_SITES.find(x => x.id === key);
     $("mLat").value = n.lat; $("mLon").value = n.lon; $("mTerrain").value = n.lat > -81.5 ? "240m" : "20m";   // the 20 m map's reach
@@ -889,21 +960,25 @@ $("addCmp").onclick = () => { if (sel && !compare.includes(sel) && compare.lengt
 function drawCompare(){
   const t = $("cmp");
   if (!compare.length){ t.innerHTML = `<tr><td style="color:var(--muted);white-space:normal">No sites yet. Open a site in the planner and choose Add to comparison.</td></tr>`; return; }
-  $("cmpLead").textContent = `Up to four sites from the planner, all at the ${selMast} m height picked there.`;
+  $("cmpLead").textContent = `Up to four sites, all at the ${selMast} m height picked in the planner. Tap a site's name to play its mission beside it.`;
   const col = s => mastEntry(s, selMast);
-  const onBest = f => s => col(s).best_dates.length ? f(col(s)) : "no safe date";
+  const onBest = f => s => col(s).headline_start ? f(col(s)) : "no safe date";
+  const dates = e => (e.best_dates_within_100m && e.best_dates_within_100m.length ? e.best_dates_within_100m : e.best_dates.map(x => x.start));
   const rows = [
-    ["Shortest safe height", s => s.recommended_mast_m != null ? s.recommended_mast_m + " m" : "none"],
+    ["Shortest safe height", s => shortestSafe(s) != null ? shortestSafe(s) + " m" : "none"],
     ["Slope", s => fmt(s.slope_deg, 1) + "°"],
     ["Flat enough to land", s => s.passes_gates ? '<span class="yes">Yes</span>' : '<span class="no">No</span>'],
     ["Safe landing days", s => col(s).safe_landing_days],
     ["Safe within 100 m", s => col(s).safe_days_within_100m == null ? "not checked" : col(s).safe_days_within_100m],
-    ["Sunlit (best date)", onBest(e => pct(e.f_sun))], ["Earth in view (best date)", onBest(e => pct(e.f_earth))], ["Both together (best date)", onBest(e => pct(e.f_both))],
+    ["Landing played", onBest(e => e.headline_start.slice(0, 10) + (e.headline_within_100m ? "" : " (exact point)"))],
+    ["Sunlit", onBest(e => pct(e.f_sun))], ["Earth in view", onBest(e => pct(e.f_earth))], ["Sun and Earth together", onBest(e => pct(e.f_both))],
     ["Longest darkness", onBest(e => e.longest_dark_h + " h")], ["Battery needed (worst safe landing)", onBest(e => Math.round(e.battery_needed_Wh) + " Wh")],
-    ["Best dates", onBest(e => e.best_dates.map(x => x.start.slice(0, 10)).join(", "))],
+    ["Best dates", onBest(e => dates(e).map(x => x.slice(0, 10)).join("<br>"))],
   ];
-  t.innerHTML = `<tr><th></th>${compare.map((s, i) => `<th>Site ${s.id} <button class="rm" data-i="${i}" aria-label="Remove site ${s.id}">×</button></th>`).join("")}</tr>` +
-    rows.map(([k, f]) => `<tr><th>${k}</th>${compare.map(s => `<td class="num">${f(s)}</td>`).join("")}</tr>`).join("");
+  const cur = s => s === sel ? " cur" : "";
+  t.innerHTML = `<tr><th></th>${compare.map((s, i) => `<th class="${cur(s).trim()}"><button class="linkbtn cmpsel" data-sel="${i}" aria-label="Play the mission for site ${s.id}"${s === sel ? ' aria-current="true"' : ""}>Site ${s.id}</button> <button class="rm" data-i="${i}" aria-label="Remove site ${s.id}">×</button></th>`).join("")}</tr>` +
+    rows.map(([k, f]) => `<tr><th>${k}</th>${compare.map(s => `<td class="num${cur(s)}">${f(s)}</td>`).join("")}</tr>`).join("");
+  t.querySelectorAll(".cmpsel").forEach(b => b.onclick = () => select(compare[+b.dataset.sel]));
   t.querySelectorAll(".rm").forEach(b => b.onclick = () => { compare.splice(+b.dataset.i, 1); if (sel) renderSite(); drawCompare(); });
 }
 
@@ -1206,7 +1281,36 @@ let mapPulse = 0;
 
 /* start: results.json next to the page; no file, no data (never a stand-in) */
 const getJSON = f => fetch(f).then(r => { if (!r.ok) throw new Error(`${f}: HTTP ${r.status}`); return r.json(); });
-Promise.all([getJSON(RESULTS), getJSON(NAMED)]).then(([d, named]) => { NAMED_SITES = named; start(d); })
+function showProfile(p, d){
+  $("landerSel").value = p.id; $("landerDesc").innerHTML = `${esc(p.description)}<br><strong>Payloads it stands for:</strong> ${esc(p.payloads)}`;
+  const m = d.meta, L = m.lander;
+  $("landerMeta").innerHTML = [`${m.mission_days}-day mission`, `${Math.round(L.e_max_Wh)} Wh battery`, `${Math.round(L.p_panel_W)} W panels`,
+    Number(m.earth_margin_deg) ? `Earth link needs ${m.earth_margin_deg}° above the horizon` : "Earth link as soon as Earth shows"].map(t => `<span>${t}</span>`).join("");
+}
+async function loadProfile(p, keep){
+  const my = ++loadToken, sel0 = $("landerSel"); sel0.disabled = true; $("loadErr").textContent = "";
+  try {
+    const file = DATA_ROOT + p.results, d = await getJSON(file);
+    if (my !== loadToken) return;                                   // a newer choice was made while this one loaded
+    if (d.meta && d.meta.profile && d.meta.profile.id !== p.id) throw new Error(`${file} is for lander "${d.meta.profile.id}", not "${p.id}"`);
+    PROFILE = p; DATA_BASE = file.slice(0, file.lastIndexOf("/") + 1);
+    start(d, keep); showProfile(p, d);
+  } catch (err) {
+    if (my !== loadToken) return;
+    if (PROFILE) $("landerSel").value = PROFILE.id;                  // stay on the lander that is still shown
+    if (DATA) $("loadErr").textContent = `Couldn't load the "${p.label}" lander: ${err.message}`; else throw err;
+  } finally { if (my === loadToken) sel0.disabled = false; }
+}
+$("landerSel").onchange = e => {
+  const p = PROFILES.find(x => x.id === e.target.value); if (!p || p === PROFILE) return;
+  loadProfile(p, { sel: sel ? String(sel.id) : null, mast: selMast, compare: compare.map(s => String(s.id)) });
+};
+Promise.all([getJSON(PROFILES_FILE), getJSON(NAMED)]).then(([profiles, named]) => {
+  if (!Array.isArray(profiles) || !profiles.length) throw new Error(`${PROFILES_FILE} has no lander presets`);
+  PROFILES = profiles; NAMED_SITES = named;
+  $("landerSel").innerHTML = profiles.map(p => `<option value="${p.id}">${p.label}</option>`).join("");
+  return loadProfile(profiles.find(p => p.default) || profiles[0]);     // the default (listed first)
+})
   .catch(err => fail(`Couldn't load the app's data: ${err.message}. Start the app with python scripts/serve.py and open http://127.0.0.1:8765/ (or publish the web/ folder).`));
 </script>
 </body>
