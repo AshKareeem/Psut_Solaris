@@ -64,7 +64,7 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         "survives": bool(survives), "dies_at_hour": None if survives else int(death),
         "battery_lowest_Wh": round(lowest, 1),
         "f_sun": round(float(lit.mean()), 3), "f_earth": round(float(e.mean()), 3), "f_both": round(float(both.mean()), 3),
-        "longest_dark_h": int(dark_h), "bridge_Wh": round(battery.energy_to_bridge(dark_h), 1),
+        "longest_dark_h": int(dark_h), "battery_needed_Wh": round(battery.e_max - lowest, 1),
         "longest_earth_blackout_h": int(quiet_h)}
 
     side = lambda c: f"{abs(c):.2f} deg {'above' if c > 0 else 'below'} the skyline"
@@ -75,9 +75,10 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         (f"Survives the mission: the battery never drops below {battery.e_min:g} Wh (lowest {lowest:.0f} Wh)."
          if survives else
          f"The battery drops below {battery.e_min:g} Wh after {int(death) + 1} h (day {int(death) // 24 + 1})."),
-        (f"Longest darkness {dark_h} h: that is the cold soak; at {battery.p_load:g} W it takes "
-         f"{battery.energy_to_bridge(dark_h):.0f} Wh to bridge (the battery holds {battery.e_max - battery.e_min:.0f} Wh above its floor)."
-         if dark_h else "No darkness during the mission: no cold soak."),
+        (f"Longest darkness {dark_h} h: that is the cold soak." if dark_h else
+         "No darkness during the mission: no cold soak."),
+        f"Battery needed: {battery.e_max - lowest:.0f} Wh of the {battery.e_max - battery.e_min:.0f} Wh it can use "
+        f"above its {battery.e_min:g} Wh floor.",
         "Battery model: power = panel power x visible Sun, whatever the Sun's direction (a sun-tracking array), "
         "so survival is an upper bound for fixed panels."]
     why = []

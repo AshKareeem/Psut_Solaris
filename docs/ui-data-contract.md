@@ -17,9 +17,9 @@ meta
   version 4, sky_source, span {first_start, last_start, n_days}, mission_days, masts_m [0, 2, 5, 10],
   default_mast_m 2, n_az, min_dte_share 0.5, earth_margin_deg, gates {lat_max_deg, slope_max_deg}, landing_error_m 100,
   lander {name, e_max_Wh, e_min_Wh, p_panel_W, p_load_W, bridge_hours, model, sources}
-  definitions {safe_landing_date, ranking, bridge_Wh, default_mast, recommended_mast_m, fields}   (words, show as is)
+  definitions {safe_landing_date, ranking, battery_needed_Wh, default_mast, recommended_mast_m, fields}   (words, show as is)
   top_sites_by_mast {"0.0": ["<site id>", ...], ...}   one list per mast: most safe days (within 100 m where
-                                                       checked), then the least bridge_Wh; no overall list
+                                                       checked), then the least battery_needed_Wh; no overall list
 sites [ ... one per site, in sites.csv order ... ]
   id, lat, lon, x_m, y_m, slope_deg, passes_gates
   recommended_mast_m        shortest mast with a safe landing date at the point (null: none)
@@ -31,7 +31,7 @@ sites [ ... one per site, in sites.csv order ... ]
     best_dates [{start, f_both, longest_dark_h}, ...]   up to 3 safe dates, best first; [] if none
     f_sun, f_earth, f_both  share of mission hours with the Sun up / Earth in view / both, on the best date (null: no safe date)
     longest_dark_h          longest darkness on the best date: the cold soak
-    bridge_Wh               energy to get through it at the battery's load
+    battery_needed_Wh       the most any safe landing hour draws from the battery: e_max - lowest level (null: none)
     battery_lowest_Wh
     longest_survival_h      the longest any landing date lasts (= mission hours if some date survives)
     complete                every ray stayed on the terrain map
@@ -47,7 +47,7 @@ version 1, site {id, lat, lon, x_m, y_m, ...}, mast_m, earth_margin_deg
 mission {start_utc, hours}
 summary
   touchdown_sun, touchdown_earth, safe_landing, survives, dies_at_hour, battery_lowest_Wh,
-  f_sun, f_earth, f_both, longest_dark_h, bridge_Wh, longest_earth_blackout_h
+  f_sun, f_earth, f_both, longest_dark_h, battery_needed_Wh (e_max - battery_lowest_Wh), longest_earth_blackout_h
 verdict [sentence, ...]     plain English, show as is
 why [sentence, ...]         what blocks the Sun in the darkest spell and Earth in the longest blackout,
                             with the distance and bearing of the terrain; a note if rays left the map

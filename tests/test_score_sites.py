@@ -2,13 +2,13 @@ import numpy as np
 
 from scripts.battery import Battery, levels, simulate, simulate_windows
 from scripts.events import skyline_at
-from scripts.score_sites import (best_dates, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
+from scripts.score_sites import (battery_needed, best_dates, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
                                  visibility, window_longest_run, window_sum)
 
 
 def test_battery_matches_iots_examples():
     b = Battery()
-    assert b.bridge_hours() == 11.2 and b.energy_to_bridge(24) == 1200.0
+    assert b.bridge_hours() == 11.2
     lowest, death = simulate(np.array([0.0] * 11 + [1.0] * 20), b)   # 11 dark hours: 700 - 550 = 150 Wh, survives
     assert death == -1 and lowest == 150.0
     lowest, death = simulate(np.array([0.0] * 14 + [1.0] * 10), b)   # after 12 dark hours it is at 100 Wh
@@ -104,7 +104,7 @@ def test_best_dates_are_the_best_hour_of_the_best_days():
 
 def test_ranking_per_mast_by_safe_days_then_battery_needed():
     """Council R1: a list per mast, so a site with 499 safe days at 10 m is never ranked below one with 4 days just
-    because it needs a taller mast. Ties: less battery to bridge the darkness, then sites.csv order."""
+    because it needs a taller mast. Ties: less battery needed, then sites.csv order."""
     days = np.zeros(300)
     days[[190, 210, 33, 13]] = [4, 499, 49, 49]
     bridge = np.zeros(300)
@@ -112,6 +112,20 @@ def test_ranking_per_mast_by_safe_days_then_battery_needed():
     assert ranking([190, 210, 33, 13], days, bridge) == [210, 13, 33, 190]
     assert np.isnan(recommended_mast(np.zeros((1, 4), int), [0.0, 2.0, 5.0, 10.0])[0])
     assert recommended_mast(np.array([[0, 0, 0, 192]]), [0.0, 2.0, 5.0, 10.0])[0] == 10.0
+
+
+def test_battery_needed_counts_partial_sun_and_never_exceeds_what_a_safe_landing_can_use():
+    """Council R6: darkness x load overstated it (44 demo cases above the 560 Wh the battery can give, yet alive)."""
+    s = np.ones((1, 1, 48), np.float32)
+    s[..., 4:14] = 0.0                                      # 10 dark hours: 500 Wh at 50 W
+    s[..., 14:18] = 0.4                                     # under half the Sun: still dark, but 80 W > 50 W charges
+    e = np.ones_like(s, bool)
+    b = Battery()
+    met = date_metrics(s, e, (s > 0.5) & e, 24, b, 0.5)
+    need = battery_needed(met, b.e_max)[0, 0]
+    assert met["gap_h"][0, 0, 0] == 14 and need == 500.0    # 14 dark hours x 50 W = 700 Wh would be wrong
+    assert need <= b.e_max - b.e_min
+    assert np.isnan(battery_needed({"safe": np.zeros((1, 1, 3), bool), "lowest_Wh": np.zeros((1, 1, 3))}, 700.0)[0, 0])
 
 
 def test_a_date_with_earth_in_view_for_too_little_of_the_mission_is_not_safe():

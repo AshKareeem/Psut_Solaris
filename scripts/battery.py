@@ -12,8 +12,8 @@ With these, a full battery bridges (e_max - e_min) / p_load = 11.2 hours without
 
 Power is p_panel times the visible fraction of the Sun, whatever the Sun's direction: that is a sun-tracking
 array. Real polar landers carry fixed panels while the Sun circles the horizon every 29.5 days, so survival here
-is an upper bound. The headline needs no guessed panel geometry: the longest darkness (the cold soak) and the
-energy to bridge it at the user's load, energy_to_bridge(hours).
+is an upper bound. Battery needed for a mission = e_max - the lowest level the simulation reaches: partial Sun
+that keeps charging through a dark spell counts, unlike a darkness x load estimate.
 """
 from dataclasses import dataclass
 
@@ -42,10 +42,6 @@ class Battery:
     def bridge_hours(self):
         """Hours a full battery lasts with no sunlight before it drops below e_min."""
         return (self.e_max - self.e_min) / self.p_load
-
-    def energy_to_bridge(self, hours):
-        """Wh the load draws through `hours` without sunlight."""
-        return hours * self.p_load
 
     def profile(self):
         """The lander as results.json states it: numbers, model and sources."""

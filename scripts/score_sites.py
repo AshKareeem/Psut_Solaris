@@ -16,14 +16,16 @@ times). No weighted score: every number is a physical quantity.
                  relay), and survives. A landing day (UTC) is safe if any of its hours is; safe_landing_days counts
                  them ("launch delays ... alternative dates"), safe_landing_hours counts the hours
   f_sun, f_earth, f_both   share of hours with s > 0.5, with e, with b
-  longest_dark_h longest run of hours without s > 0.5: the cold soak; bridge_Wh = longest_dark_h * p_load
+  longest_dark_h longest run of hours without s > 0.5: the cold soak
+  battery needed e_max - the lowest battery level of a mission (scripts/battery.py); per site and mast the most
+                 that any safe landing hour needs
   best date      per site and mast: the best safe hour of each day, by the most hours of power and Earth together,
                  then the shortest darkness, then the earliest; the best days first. A mast with no safe date has none. sites/<id>.json shows the
                  recommended mast's best date (within 100 m when that check ran).
   recommended mast  the shortest mast with at least one safe landing date (information only)
   ranking        one list per mast (top_sites_by_mast, site ids): sites within 6 deg of the pole, slope under 10 deg,
                  every ray complete at that mast and at least one safe date; most safe landing days first, then
-                 the least bridge_Wh, then sites.csv order. The user picks the lander's mast (default 2 m).
+                 the least battery needed, then sites.csv order. The user picks the lander's mast (default 2 m).
   within 100 m   (--neighbours) a lander aimed at a site comes down anywhere within 100 m (NASA's landing accuracy),
                  so a date is safe for the site only if it is safe at every point there. Where that was checked, the
                  lists count those days instead, and a site with none leaves that mast's list;
@@ -161,11 +163,16 @@ def recommended_mast(n_safe, masts):
     return np.where(has.any(axis=1), np.asarray(masts)[has.argmax(axis=1)], np.nan)
 
 
-def ranking(rows, days, bridge_Wh):
-    """Site rows ordered by days (more first), then battery needed to bridge the longest darkness (less first),
-    then sites.csv order."""
+def battery_needed(met, e_max):
+    """The most battery energy (Wh) any safe landing hour draws, e_max - lowest level, [sites, masts]; NaN if none."""
+    need = np.where(met["safe"], e_max - met["lowest_Wh"], -np.inf).max(-1)
+    return np.where(np.isfinite(need), need, np.nan)
+
+
+def ranking(rows, days, need_Wh):
+    """Site rows ordered by days (more first), then battery needed (less first), then sites.csv order."""
     rows = np.asarray(rows, int)
-    return rows[np.lexsort((rows, bridge_Wh[rows], -days[rows]))].tolist()
+    return rows[np.lexsort((rows, need_Wh[rows], -days[rows]))].tolist()
 
 
 def neighbour_safe(nb_dir, sky, hours, battery, earth_margin, min_dte_share, parent_of, parent_safe):
@@ -220,7 +227,7 @@ def main():
     starts = sky["time_utc"][: s.shape[-1] - hours + 1]         # every landing hour
     order = best_dates(met, hours, a.dates)                     # [dates, sites, masts]
     at_best = {k: np.take_along_axis(v, order[0][..., None], axis=-1)[..., 0] for k, v in met.items()}
-    bridge_Wh = battery.energy_to_bridge(at_best["gap_h"])      # [sites, masts], at the best date
+    need_Wh = battery_needed(met, battery.e_max)               # [sites, masts], worst safe landing hour
     survived_h = np.where(met["death_h"] < 0, hours, met["death_h"]).max(axis=-1)   # longest any date lasts
     rec = recommended_mast(n_safe, masts)
     np.savez_compressed(out / "dates.npz", start_utc=starts, safe=met["safe"], touchdown=met["touchdown"],
@@ -230,7 +237,7 @@ def main():
     passes_gates = (lat <= GATE_LAT) & (slope < GATE_SLOPE)
     complete = ok.all(axis=2)                                   # [sites, masts]
     candidates = [np.flatnonzero(passes_gates & complete[:, m] & (n_safe[:, m] > 0)) for m in range(len(masts))]
-    by_mast = [ranking(c, n_safe[:, m], bridge_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
+    by_mast = [ranking(c, n_safe[:, m], need_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
 
     days_100m = np.full((n_sites, len(masts)), np.nan)
     complete_100m = np.zeros((n_sites, len(masts)), bool)
@@ -253,7 +260,7 @@ def main():
         key = np.where(checked[:, None], np.nan_to_num(days_100m), n_safe)
         # a site whose dates all fail somewhere within 100 m is not safe to aim at, so it leaves that mast's list
         candidates = [c[key[c, m] > 0] for m, c in enumerate(candidates)]
-        by_mast = [ranking(c, key[:, m], bridge_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
+        by_mast = [ranking(c, key[:, m], need_Wh[:, m])[: a.top] for m, c in enumerate(candidates)]
     ranked = sorted({i for rows in by_mast for i in rows})
 
     results = {
@@ -271,9 +278,10 @@ def main():
                                      f"{a.days}-day mission (no relay), and the battery never below {battery.e_min:g} Wh",
                 "ranking": "one list per mast height: most safe landing days (safe at every point within 100 m "
                            "where that was checked; sites with none there are left out), then the least battery "
-                           "needed to bridge the longest darkness",
-                "bridge_Wh": "battery energy needed to survive the longest darkness of the best landing date, at "
-                             f"the lander's {battery.p_load:g} W load",
+                           "needed",
+                "battery_needed_Wh": "the most battery energy any safe landing hour draws: a full charge minus the "
+                                     "lowest level during the mission (the battery model, so sunlight that comes back "
+                                     f"partway counts); at most {battery.e_max - battery.e_min:g} Wh by the safe rule",
                 "default_mast": "2 m: the best-fit observer height when the engine is checked against NASA's maps",
                 "recommended_mast_m": "the shortest mast with at least one safe landing date (information only)",
                 "fields": "per-mast numbers are for that mast's best landing date (best_dates[0]); null if it has "
@@ -298,7 +306,7 @@ def main():
                                for j in range(order.shape[0]) if met["safe"][i, m, order[j, i, m]]],
                 "f_sun": pick("n_sun", lambda v: r(v / hours)), "f_earth": pick("n_earth", lambda v: r(v / hours)),
                 "f_both": pick("n_both", lambda v: r(v / hours)), "longest_dark_h": pick("gap_h", int),
-                "bridge_Wh": r(bridge_Wh[i, m], 1) if best else None,
+                "battery_needed_Wh": r(need_Wh[i, m], 1) if best else None,
                 "battery_lowest_Wh": pick("lowest_Wh", lambda v: r(v, 1)),
                 "longest_survival_h": int(survived_h[i, m]), "complete": bool(complete[i, m]),
                 "best_dates_within_100m": None if not n_points[i] else

@@ -619,9 +619,9 @@ function renderSite(){
   ];
   if (best) tiles.push(
     ["Sunlit", pct(e.f_sun), "sun"], ["Earth in view", pct(e.f_earth), "earth"], ["Sun and Earth together", pct(e.f_both), ""],
-    ["Longest darkness (cold soak)", e.longest_dark_h + " h", ""], ["Battery needed to get through it", Math.round(e.bridge_Wh) + " Wh", ""]);
+    ["Longest darkness (cold soak)", e.longest_dark_h + " h", ""], ["Battery needed (worst safe landing)", Math.round(e.battery_needed_Wh) + " Wh", ""]);
   $("tiles").innerHTML = tiles.map(tile).join("");
-  $("tilesNote").textContent = best ? `Percentages, darkness and battery are for the best landing date at the exact point, ${hourTxt(e.best_dates[0].start)}, over ${DATA.meta.mission_days} days.` : "";
+  $("tilesNote").textContent = best ? `Percentages and darkness are for the best landing date at the exact point, ${hourTxt(e.best_dates[0].start)}, over ${DATA.meta.mission_days} days.` : "";
   renderPlayerHead();
   drawPlayer();
 }
@@ -854,7 +854,7 @@ function drawCompare(){
     ["Safe landing days", s => col(s).safe_landing_days],
     ["Safe within 100 m", s => col(s).safe_days_within_100m == null ? "not checked" : col(s).safe_days_within_100m],
     ["Sunlit (best date)", onBest(e => pct(e.f_sun))], ["Earth in view (best date)", onBest(e => pct(e.f_earth))], ["Both together (best date)", onBest(e => pct(e.f_both))],
-    ["Longest darkness", onBest(e => e.longest_dark_h + " h")], ["Battery needed for it", onBest(e => Math.round(e.bridge_Wh) + " Wh")],
+    ["Longest darkness", onBest(e => e.longest_dark_h + " h")], ["Battery needed (worst safe landing)", onBest(e => Math.round(e.battery_needed_Wh) + " Wh")],
     ["Best dates", onBest(e => e.best_dates.map(x => x.start.slice(0, 10)).join(", "))],
   ];
   t.innerHTML = `<tr><th></th>${compare.map((s, i) => `<th>Site ${s.id} <button class="rm" data-i="${i}" aria-label="Remove site ${s.id}">×</button></th>`).join("")}</tr>` +
