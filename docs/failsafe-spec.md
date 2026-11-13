@@ -1,6 +1,8 @@
 # Build spec: the mission failsafe blocks (backend)
 
-**Who this is for:** the coding agent that builds the backend overnight (Fri Nov 13 → Sat Nov 14, 2026), and the team member who reviews it in the morning. BIT builds the page from `docs/ui-data-contract.md` after this lands.
+**Who this is for:** the coding agent that builds the backend overnight (Fri Nov 13 → Sat Nov 14, 2026), and the team member who reviews it in the morning.
+
+**How the agent works:** offline. It gets the project as a zip (git history included), has no GitHub access and no NASA data (`data/`, about 2 GB, and `out/` stay on Ash's laptop), and returns the whole project as one zip. Claude then reviews it on the laptop, runs the full test suite and the rebuild, and merges and pushes. BIT builds the page from `docs/ui-data-contract.md` after this lands.
 
 **Where this comes from:** Ash's four failsafe features, decided by an LLM council (round 10, Nov 13) with five anonymous peer reviews. All five advisors and all five reviewers agreed on the cuts below.
 
@@ -27,7 +29,7 @@ The future-work line: *"Per-point skyline + SPICE sky is the core of a traverse 
 
 ## 1. Rules (Ash's; break none)
 
-- **Work on a branch** named `failsafe`, made from `main` after the R3 commit. Push the branch. **Never merge into `main`**: Ash merges after the morning checks.
+- **Work on a local git branch** named `failsafe`, made from `main` in the repo you were given (its `.git` is in the zip; `main` is at the R3 commit `2095303` or later). No push, no merge, no remote. Return the whole project folder, `.git` included, as one zip named `NasaSA_failsafe.zip`.
 - **Add fields only.** No existing field, file name, `results.json` key, ranking, or `battery.step` changes. A `git diff` of `web/data` after the rebuild must show only additions.
 - **No new physics, and no new formula for an existing quantity:**
   - Sun and Earth visibility come from `scripts/events.py`.
@@ -54,10 +56,11 @@ The future-work line: *"Per-point skyline + SPICE sky is the core of a traverse 
   - with `--neighbours`, the 17 points: `nb` (`sites.csv` with `parent` and **each point's own slope**) and `safe_100m`.
   
   It writes `sites/<id>_<mast>.json` in the loop at the end of `main()`. **A block that needs years of hours or the 17 points is built there and added to the report dict before it is written.**
-- The rebuild:
+- **The agent can't rebuild the data:** `data/` and `out/` are not in the zip. Everything must be testable on synthetic inputs (the test files already do this: `sky_flat()`, `track()`, tiny arrays). Tests marked to skip without `data/` will skip; that is expected.
+- **Real examples to read:** `web/data/sites/33_5.0.json` (the demo mission file) and `web/data/results.json` show the current schema with real numbers.
+- **The rebuild happens after review, on Ash's laptop (Claude runs it):**
   - `python scripts/run_profiles.py --horizon out/pipe/horizon --sky out/pipe6/sky.npz --sites out/sites/sites.csv --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --out out/profiles_failsafe` (about 15 minutes);
-  - then `python scripts/build_web.py --profiles out/profiles_failsafe`;
-  - both need `data/` and `out/` on Ash's laptop.
+  - then `python scripts/build_web.py --profiles out/profiles_failsafe`.
 
 ## 3. The blocks, in commit order
 
@@ -141,30 +144,34 @@ confidence
 - The shifted runs **call the same `events.py` functions** with `H ± 0.02`. No copy of the event logic.
 - **Tests:** a 0.0° shift gives 0 minutes and `verdict_changes` false; on a synthetic track whose Sun crosses the skyline at a known rate, a 0.02° shift moves sunset by the expected minutes (worked out in the test's comment).
 
-### Commit 4: data contract, README line, rebuild
+### Commit 4: data contract and README line (the rebuild comes after review)
 
 - **`docs/ui-data-contract.md`:** add every new block and field, its source, and its labels, under the mission-file schema. Mark `risk` as "ranked sites only". This is the frozen schema BIT builds from in the morning.
 - **README:** one line under "The web app", naming the failsafe blocks.
-- **The data:**
-  - Rebuild with the two commands in Part 2.
-  - Commit `web/data` on the branch.
-  - Check that `git diff --stat main -- web/data` shows only modified or added site files and that `results.json` is byte-identical except where the R3 commit already changed it. Compare with `git diff main -- web/data/results.json`; it should be empty, since `risk` lives in the site files.
+- **Don't touch `web/data/`.** The agent can't rebuild it; the reviewer does, with the commands in Part 2.
+- If the environment has the packages, prove the wiring end to end on synthetic data instead: a test that runs `site_report()` on a synthetic track and checks every new block is present and JSON-serialisable.
 
-## 4. Morning acceptance checks (Ash, about 10 minutes)
+## 4. Acceptance checks (the reviewer, on Ash's laptop, after unzipping)
 
-1. `python -m pytest tests -q`: green, with 142 plus the new tests.
-2. `git log --oneline main..failsafe`: four separate commits.
+0. Unzip into a fresh folder, never over the working repo. Read `docs/failsafe-handoff.md`. Review `git diff main..failsafe` line by line against this spec. Copy `data/` and `out/` in (or point the commands at the originals).
+1. `python -m pytest tests -q` with `data/` present: green, with 142 plus the new tests.
+2. `git log --oneline main..failsafe`: four separate commits (plus the handoff).
+2b. Rebuild with the commands in Part 2.
 3. `web/data/sites/33_5.0.json` has `risk`, `contact_plan`, `dark_verdict`, `weak_battery` and `confidence`, with no null where this spec doesn't allow one and no unlabelled constant.
 4. `python scripts/serve.py`, then plan a mission at site 33 in the page. The answer carries `contact_plan`, `dark_verdict`, `weak_battery` and `confidence`.
 5. `git diff main..failsafe -- web/data/results.json` is empty.
 6. **The stranger test:** someone outside the team reads site 33's `words` sentences cold. In under 30 seconds they can say whether to land there, when, and what the fallback is.
-7. All six pass → merge `failsafe` into `main` and push. Any one fails → merge only the commits that pass, or none.
+7. All pass → bring the commits into the working repo (`git fetch <unzipped folder> failsafe`, then merge), commit the rebuilt `web/data`, and push `main`. Any one fails → take only the commits that pass, or none.
 
 ## 5. Handoff note
 
 When done, write `docs/failsafe-handoff.md` with:
 - what was built;
-- the test count;
+- the test count, and exactly which tests you could run and which you couldn't (missing packages or data);
+- the Python and package versions you ran with (`pip freeze` of numpy, numba, rasterio, pyproj, spiceypy);
 - the four commit hashes;
 - anything reverted, and why;
-- site 33 at 5 m's `words` sentences pasted in, so Ash can run the stranger test from his phone.
+- every place you weren't sure the spec matched the code, and what you chose;
+- the `words` sentences your code produces on the synthetic tests, so the reviewer can judge the wording before the rebuild.
+
+Commit it on the branch, then zip the whole project folder (with `.git`) as `NasaSA_failsafe.zip`.
