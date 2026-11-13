@@ -35,25 +35,19 @@ def read_sites(path):
     return ids, x, y
 
 
-def write_sites(path, dem, rows, cols):
-    """Write sites at integer grid positions (rows, cols) of dem, with their height and slope."""
+def write_sites(path, dem, rows, cols, slope):
+    """Write sites at integer grid positions (rows, cols) of dem, with their height and slope (deg over 100 m, NASA's
+    gate, one per site: scripts/named_to_sites.py height_and_slope on the finest map)."""
     rows, cols = np.asarray(rows), np.asarray(cols)
     x, y = dem.rowcol_to_xy(rows, cols)
     lat, lon = xy_to_latlon(x, y)
-    height, slope = dem.height[rows, cols], slope_deg(dem, rows, cols)
+    height = dem.height[rows, cols]
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(COLUMNS)
         for i in range(rows.size):
             w.writerow([i, f"{x[i]:.3f}", f"{y[i]:.3f}", f"{lat[i]:.8f}", f"{lon[i]:.8f}",
                         f"{height[i]:.2f}", f"{slope[i]:.2f}"])
-
-
-def slope_deg(dem, rows, cols):
-    """Slope at grid positions from central differences over two pixels. Demo only: Step 0 owns the 100 m slope."""
-    dzdx = (dem.height[rows, cols + 1] - dem.height[rows, cols - 1]) / (2 * dem.pixel)
-    dzdy = (dem.height[rows - 1, cols] - dem.height[rows + 1, cols]) / (2 * dem.pixel)
-    return np.degrees(np.arctan(np.hypot(dzdx, dzdy)))
 
 
 def grid_around(dem, lat, lon, n, step):

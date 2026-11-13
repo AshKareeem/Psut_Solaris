@@ -15,9 +15,13 @@ def test_demo_sites_to_horizon_files(tmp_path, monkeypatch):
     for module in (make_demo_sites, run_horizon):
         monkeypatch.setattr(module, "read_polar_dem", lambda path, bounds=None: dem)
     lat, lon = dem.rowcol_to_latlon(150, 250)
-    monkeypatch.setattr(sys, "argv", ["make_demo_sites.py", "fake.lbl", "--out", str(tmp_path / "sites.csv"),
+    monkeypatch.setattr(sys, "argv", ["make_demo_sites.py", "fake.lbl", "--slope-dem", "fake.lbl",
+                                      "--out", str(tmp_path / "sites.csv"),
                                       "--lat", str(lat), "--lon", str(lon), "--n", "3", "--step", "5"])
     make_demo_sites.main()
+    # the slope is NASA's gate quantity, over 100 m: the cone's flank (atan 0.25) 100 m from the peak, 0 at the peak
+    slope = np.loadtxt(tmp_path / "sites.csv", delimiter=",", skiprows=1, usecols=6)
+    assert np.allclose(slope[[1, 3, 5, 7]], np.degrees(np.arctan(0.25)), atol=0.01) and slope[4] < 0.01
     monkeypatch.setattr(sys, "argv", ["run_horizon.py", "fake.lbl", str(tmp_path / "sites.csv"), "--out", str(tmp_path),
                                       "--masts", "0", "2", "--dmax", "2000", "--n-az", "90"])
     run_horizon.main()

@@ -65,6 +65,7 @@ python scripts/serve.py                                     # http://127.0.0.1:8
 
 ## Start here (team)
 
+- **Everything in one place, for every team member:** `docs/team-guide.md` (the challenge, the physics, each step, NASA data, validation, results, the web app, limits, judge questions).
 - **What the whole pipeline does:** `docs/landing-site-algorithm.pdf`. It covers Steps 0 to 5, the files passed between steps, and who owns what.
 - **Videos (watch these first):** [explainer videos on the horizon engine](https://drive.google.com/drive/folders/1V6i779YKPqB5drJhxOfRTtGKVn8VfF0t?usp=sharing), made with Gemini from our docs and figures. They cover the problem, the geometry, how a ray is walked and why it's fast, the terrain and accuracy studies, and the NASA validation. If a video and the docs disagree on a number, the docs are right.
 - **How the horizon engine works:** `docs/horizon-engine/`, chapter by chapter.
@@ -217,7 +218,7 @@ Result: **1,440 azimuths, 250 km, κ = 0.002**, stored in `horizon/__init__.py`;
 ## Part 5: batch run (files for Steps 3–4)
 
 ```
-python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --out out/demo/sites.csv
+python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --slope-dem data/ldem_80s_20m.lbl --out out/demo/sites.csv
 python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --fine data/ldem_875s_20m.lbl --out out/demo
 ```
 

@@ -29,6 +29,9 @@ sites [ ... one per site, in sites.csv order ... ]
   recommended_mast_m        shortest mast with a safe landing date at the point (null: none)
   recommended_mast_100m_m   shortest mast with a date safe everywhere within 100 m (null: not checked or none)
   landing_error_points      points checked within 100 m (0: not checked)
+  slope_max_within_100m_deg the steepest of those points, slope over 100 m on the 20 m map (null: not checked)
+  steep_points_within_100m  how many of them are at or above the 10 deg gate (null: not checked); any one makes
+                            every date unsafe within 100 m (council R3, option A)
   masts {"0.0": {...}, "2.0": {...}, ...}
     safe_landing_days       landing days with at least one safe landing hour (any hour of the day, UTC)
     safe_landing_hours      the safe landing hours themselves
@@ -40,14 +43,16 @@ sites [ ... one per site, in sites.csv order ... ]
     headline_within_100m    true when headline_start is safe at all 17 points within 100 m
     detail_file             "sites/<id>_<mast>.json": that landing's full mission, for ranked sites with a safe landing
                             at this mast; else null. Relative to this results.json's folder
-    best_dates [{start, f_both, longest_dark_h}, ...]   up to 3 safe dates on the exact point, best first; [] if none
+    best_dates [{start, f_both, longest_dark_h}, ...]   up to 3 safe dates on the exact point, best first (a firm,
+                                                        not marginal, touchdown first); [] if none
     f_sun, f_earth, f_both  share of mission hours with the Sun up / Earth in view / both, for headline_start (null: none)
     longest_dark_h          longest darkness for headline_start: the cold soak
     battery_needed_Wh       the most any safe landing hour draws from the battery: e_max - lowest level (null: none)
     battery_lowest_Wh
     longest_survival_h      the longest any landing date lasts (= mission hours if some date survives)
     complete                every ray stayed on the terrain map
-    safe_days_within_100m   landing dates safe at all 17 points within 100 m (null unless the check ran for this site)
+    safe_days_within_100m   landing dates safe at all 17 points within 100 m, each also under 10 deg of slope (null
+                            unless the check ran for this site)
     best_dates_within_100m  up to 3 of those dates, best first
     complete_within_100m    every ray of every point stayed on the map
 ```

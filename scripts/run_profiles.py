@@ -51,7 +51,7 @@ def main():
         run("score_sites.py", *base, *p["args"], "--out", out / pid / "first")
     nb = out / "nb"
     run("make_neighbours.py", a.sites, *[out / pid / "first" / "results.json" for pid in PROFILES],
-        "--out", nb / "sites.csv")
+        "--slope-dem", a.fine, "--out", nb / "sites.csv")
     run("run_horizon.py", a.coarse, nb / "sites.csv", "--fine", a.fine, "--out", nb)
     for pid, p in PROFILES.items():
         run("score_sites.py", *base, *p["args"], "--neighbours", nb, "--out", out / pid)

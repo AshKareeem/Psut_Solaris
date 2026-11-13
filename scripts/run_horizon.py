@@ -8,7 +8,7 @@ Writes into --out:
 Site i is row i of the sites file. Azimuth j is theta = j * 360 / n_az degrees from map +x, counterclockwise.
 
 Usage:
-  python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --out out/demo/sites.csv
+  python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --slope-dem data/ldem_80s_20m.lbl --out out/demo/sites.csv
   python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --out out/demo
   python scripts/run_horizon.py data/ldem_75s_240m.lbl out/demo/sites.csv --fine data/ldem_875s_20m.lbl --out out/demo
 """

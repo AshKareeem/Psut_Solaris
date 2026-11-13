@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from horizon.dem import PolarDEM, latlon_to_xy
-from horizon.sites import grid_around, read_sites, slope_deg, write_sites
+from horizon.sites import grid_around, read_sites, write_sites
 from horizon.synthetic import cone, distance_grid
 
 
@@ -16,7 +16,7 @@ def test_demo_grid_round_trip(tmp_path):
     dem = cone_dem()
     rows, cols = grid_around(dem, *dem.rowcol_to_latlon(150, 250), n=3, step=5)
     assert (rows[4], cols[4]) == (150, 250)  # the centre site is the requested pixel
-    write_sites(tmp_path / "sites.csv", dem, rows, cols)
+    write_sites(tmp_path / "sites.csv", dem, rows, cols, np.zeros(9))
     ids, x, y = read_sites(tmp_path / "sites.csv")
     r, c = dem.xy_to_rowcol(x, y)
     assert ids == [str(i) for i in range(9)]
@@ -27,10 +27,6 @@ def test_grid_off_the_map_fails_fast():
     dem = cone_dem()
     with pytest.raises(ValueError, match="runs off the map"):
         grid_around(dem, *dem.rowcol_to_latlon(5, 200), n=3, step=5)  # would wrap to the bottom rows
-
-
-def test_slope_on_the_cone_flank():
-    assert slope_deg(cone_dem(), np.array([150]), np.array([255]))[0] == pytest.approx(np.degrees(np.arctan(0.25)))
 
 
 def test_missing_column_fails_fast(tmp_path):

@@ -2,7 +2,7 @@ import numpy as np
 
 from scripts.battery import Battery, levels, simulate, simulate_windows
 from scripts.events import skyline_at
-from scripts.score_sites import (battery_needed, best_dates, rank_reasons, ranking_keys, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
+from scripts.score_sites import (battery_needed, best_dates, firm_touchdown, rank_reasons, ranking_keys, date_metrics, neighbour_safe, ranking, recommended_mast, safe_days,
                                  visibility, window_longest_run, window_sum)
 
 
@@ -77,7 +77,7 @@ def test_a_sky_whose_only_safe_touchdown_is_1300_gives_one_safe_day():
     met = date_metrics(s, e, (s > 0.5) & e, hours, Battery(), 0.5)
     assert np.flatnonzero(met["safe"][0, 0]).tolist() == [13]
     assert safe_days(met["safe"])[0, 0] == 1
-    assert best_dates(met, hours, 1)[0, 0, 0] == 13
+    assert best_dates(met, np.ones_like(met['safe']), hours, 1)[0, 0, 0] == 13
 
 
 def test_a_date_that_dies_is_never_a_best_date():
@@ -87,7 +87,7 @@ def test_a_date_that_dies_is_never_a_best_date():
     e = np.ones_like(s, bool)
     met = date_metrics(s, e, (s > 0.5) & e, 24, Battery(), 0.5)
     assert met["touchdown"][0, 0, 0] and not met["safe"].any()
-    order = best_dates(met, 24, 2)
+    order = best_dates(met, np.ones_like(met['safe']), 24, 2)
     assert not met["safe"][0, 0, order[:, 0, 0]].any()      # no safe date to list
     assert np.isnan(recommended_mast(met["safe"].sum(-1), [0.0])[0])
 
@@ -99,7 +99,26 @@ def test_best_dates_are_the_best_hour_of_the_best_days():
     both[..., [0, 2, 5, 30, 50, 60]] = [99, 10, 10, 12, 12, 12]   # hour 0 is not safe: never listed
     gap[..., [2, 5, 30, 50, 60]] = [4, 0, 5, 3, 3]                 # hour 5 beats hour 2 on darkness
     met = {"safe": safe, "n_both": both, "gap_h": gap}
-    assert best_dates(met, 24, 3)[:, 0, 0].tolist() == [50, 30, 5]  # day 3 (earliest of 50, 60), day 2, day 1 (hour 5)
+    firm = np.ones_like(safe)
+    assert best_dates(met, firm, 24, 3)[:, 0, 0].tolist() == [50, 30, 5]  # day 3 (earliest of 50, 60), day 2, day 1 (hour 5)
+
+
+def test_a_firm_touchdown_beats_a_marginal_one_with_more_hours():
+    """Risk review Nov 13: 36 of 39 headline landings were marginal, because ties went to the earliest hour, when Earth
+    is just rising. A firm touchdown (both bodies at least 0.5 deg clear) now comes first; days are still ranked."""
+    safe, both, gap = np.zeros((1, 1, 48), bool), np.zeros((1, 1, 48), np.int16), np.zeros((1, 1, 48), np.int16)
+    safe[..., [3, 9, 30]] = True
+    both[..., [3, 9, 30]] = [20, 15, 20]
+    firm = np.zeros_like(safe)
+    firm[..., 9] = True                                       # hour 3 has more hours together but is marginal
+    met = {"safe": safe, "n_both": both, "gap_h": gap}
+    assert best_dates(met, firm, 24, 2)[:, 0, 0].tolist() == [9, 30]   # day 1 picks the firm hour and ranks first
+
+
+def test_firm_touchdown_needs_both_bodies_half_a_degree_clear():
+    H = np.zeros((1, 1, 360))
+    firm = firm_touchdown(H, sky_flat([0.4, 0.6, 0.6], [0.0, 0.0, -0.5]), 0.0)
+    assert firm[0, 0].tolist() == [False, True, False]        # Sun 0.4 deg up; both clear; Earth's top 0.45 deg up
 
 
 def test_ranking_per_mast_by_safe_days_then_battery_needed():
@@ -160,9 +179,13 @@ def test_a_date_counts_within_100_m_only_if_safe_at_every_point(tmp_path):
     parent_safe = date_metrics(*visibility(H_parent, sky, 0.0), 24, Battery(), 0.5)["safe"]
     assert parent_safe[0, 0].all() and parent_safe.shape == (1, 1, 49)
     safe_100m, complete, n_points = neighbour_safe(tmp_path, sky, 24, Battery(), 0.0, 0.5, np.array([0, 0]),
-                                                   parent_safe)
+                                                   parent_safe, np.array([False, False]))
     assert safe_100m[0, 0].tolist() == [False] * 24 + [True] * 25   # the ridge hides touchdown on day 1
     assert complete[0, 0] and n_points.tolist() == [2]
+    # council R3, option A: one point within 100 m too steep to land on, and no date is safe within 100 m
+    steep, _, _ = neighbour_safe(tmp_path, sky, 24, Battery(), 0.0, 0.5, np.array([0, 0]), parent_safe,
+                                 np.array([False, True]))
+    assert not steep.any()
 
 
 def test_rank_reasons_name_the_metric_that_decides_each_place():
