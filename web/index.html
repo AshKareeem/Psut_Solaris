@@ -188,6 +188,13 @@ canvas{display:block;width:100%}
 .masts .rec{font-size:.72rem;color:var(--accent);margin-left:6px}
 .masts button[aria-pressed="true"] .rec{color:var(--ink)}
 .verdict{font-size:1.06rem;margin:4px 0 14px;max-width:75ch}
+.whyrank{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:10px 14px;margin:0 0 14px;background:var(--panel2)}
+.whyrank h4{font-size:.95rem;margin:0 0 4px}
+.whyrank p{margin:0 0 6px;max-width:80ch}
+.whyrank ul{margin:4px 0 0 18px;padding:0;color:var(--muted);font-size:.92rem}
+.howrank{margin:6px 0 10px;color:var(--muted);font-size:.9rem}
+.howrank ol{margin:4px 0 0 18px;padding:0}
+.howrank strong{color:var(--ink)}
 .story{margin:6px 0 14px;padding-left:20px;max-width:80ch;color:var(--ink)}
 .story li{margin:4px 0}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
@@ -352,6 +359,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <p class="hint" style="margin:10px 0 0">Panel and antenna height (2 m is the best fit to NASA's sunlight map; 5 m and 10 m are design requirements, no lander has flown a mast)</p>
             <div class="masts" id="masts" role="group" aria-label="Panel and antenna height"></div>
             <p class="verdict" id="verdict"></p>
+            <div class="whyrank" id="whyRank" aria-live="polite"></div>
             <div class="tiles" id="tiles"></div>
             <p class="hint" id="tilesNote"></p>
             <p class="hint" id="safeDef"></p>
@@ -364,7 +372,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         <div class="col sidecol">
           <div class="card" id="rankCard">
             <h3 id="rankTitle">Best sites</h3>
-            <p class="hint" id="rankHint"></p>
+            <div class="howrank" id="rankHint"></div>
             <ol class="rank" id="rank"></ol>
           </div>
           <div class="card" id="compareCard">
@@ -520,7 +528,7 @@ function start(d, keep){
   const b = $("dataBadge"), sp = d.meta.span;
   b.className = "badge real"; b.textContent = `Real data · landings ${sp.first_start.slice(0, 10)} to ${sp.last_start.slice(0, 10)}`;
   b.title = `Sky: ${d.meta.sky_source} · Lander: ${d.meta.lander.name}`;
-  $("rankHint").textContent = "Ranking: " + d.meta.definitions.ranking + ".";
+  showHowWeRank(d.meta);
   $("safeDef").textContent = "A safe landing date means " + d.meta.definitions.safe_landing_date + ".";
   fitMap(); if (window.__globeRefresh) window.__globeRefresh();
   // keep the site the user was viewing only if it has a safe landing for this lander; else open the new list's best
@@ -568,6 +576,26 @@ const ms = t => Date.parse(t.length === 13 ? t + ":00:00Z" : t + "Z");
 function span(dms){
   const m = Math.round(dms / 60000), h = Math.floor(m / 60);
   return h >= 48 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${h} h ${String(m % 60).padStart(2, "0")} min`;
+}
+// "How we rank": the gates and the ranking keys exactly as results.json states them (scripts/score_sites.py)
+function showHowWeRank(meta){
+  const G = meta.gates, keys = meta.ranking_keys;
+  $("rankHint").innerHTML = `<strong>How we rank.</strong> A site is listed at a height only if it is within ${90 + G.lat_max_deg}° of the pole, ` +
+    `its ground slopes less than ${G.slope_max_deg}° over 100 m, every direction of its horizon stays on the terrain map, and it has at least one safe landing day. ` +
+    `Then, in this order:<ol>${keys.map(k => `<li>${k.better === "more" ? "Most" : "Least"} ${esc(k.words)}</li>`).join("")}<li>Site order, if everything ties</li></ol>` +
+    `No weighted score: each step only breaks ties of the one before.`;
+}
+// "Why this rank": the backend's sentence (which metric decides the place) plus the site's own reasons at this height
+function showWhyRank(s, e){
+  const box = $("whyRank"), G = DATA.meta.gates, d = s._detail && s._detail[mk(selMast)];
+  let head;
+  if (e.rank) head = `<h4>Why #${e.rank} at ${selMast} m</h4><p>${esc(e.rank_reason)}</p>`;
+  else if (!s.passes_gates) head = `<h4>Not ranked</h4><p>${s.slope_deg >= G.slope_max_deg ? `Too steep to land: ${fmt(s.slope_deg, 1)}° over 100 m (limit ${G.slope_max_deg}°).` : "More than 6° from the pole."}</p>`;
+  else if (!e.complete) head = `<h4>Not ranked at ${selMast} m</h4><p>Part of its horizon runs off the terrain map, so its numbers can't be trusted.</p>`;
+  else if (!e.safe_landing_days) head = `<h4>Not ranked at ${selMast} m</h4><p>No landing day in ${years()} is safe here at this height.</p>`;
+  else head = `<h4>Not in the top list at ${selMast} m</h4><p>It has safe landing days, but the list shows only the best sites (and, when checked, only sites tested within 100 m).</p>`;
+  const why = d ? `<p style="margin-top:8px"><strong>What decides this site's mission</strong> (landing ${hourTxt(d.mission.start_utc)}):</p><ul>${d.why.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : "";
+  box.innerHTML = head + why;
 }
 function listInto(el, lines){ el.replaceChildren(...lines.map(t => { const li = document.createElement("li"); li.textContent = t; return li; })); }
 function skyAt(sk, az){ const n = sk.length, a = wrap360(az) * n / 360, i = Math.floor(a), f = a - i; return sk[i % n] * (1 - f) + sk[(i + 1) % n] * f; }
@@ -656,7 +684,8 @@ function buildRank(){
   }
   top.forEach((s, i) => {
     const e = mastEntry(s, selMast), li = document.createElement("li"), b = document.createElement("button"); b.dataset.id = s.id;
-    const sub = e.safe_days_within_100m != null ? `${e.safe_landing_days} safe days on target · ${e.safe_days_within_100m} within 100 m` : `${e.safe_landing_days} safe days on target`;
+    const bat = e.battery_needed_Wh != null ? ` · battery ${Math.round(e.battery_needed_Wh)} Wh` : "";
+    const sub = (e.safe_days_within_100m != null ? `${e.safe_days_within_100m} days within 100 m · ${e.safe_landing_days} on target` : `${e.safe_landing_days} safe days on target`) + bat;
     b.innerHTML = `<span class="pos num">${i + 1}</span><span>Site ${s.id}<br><small>${sub}</small></span><span class="num">${safeDays(e)}</span>`;
     b.setAttribute("aria-current", sel === s);
     b.onclick = () => select(s); li.appendChild(b); ol.appendChild(li);
@@ -680,6 +709,7 @@ function renderSite(){
   $("addCmp").disabled = compare.includes(s) || compare.length >= 4;
   $("addCmp").textContent = compare.includes(s) ? "In comparison" : "Add to comparison";
   $("verdict").textContent = verdict(s, e);
+  showWhyRank(s, e);
   const tile = ([k, v, c]) => `<div class="tile ${c}"><div class="v num">${v}</div><div class="k">${k}</div></div>`;
   const best = e.headline_start != null;
   const tiles = [
