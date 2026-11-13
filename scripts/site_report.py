@@ -97,8 +97,10 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
          f"The battery drops below {battery.e_min:g} Wh after {int(death) + 1} h (day {int(death) // 24 + 1})."),
         (f"Longest darkness {dark_h} h: that is the cold soak." if dark_h else
          "No darkness during the mission: no cold soak."),
-        f"Battery needed: {battery.e_max - lowest:.0f} Wh of the {battery.e_max - battery.e_min:.0f} Wh it can use "
-        f"above its {battery.e_min:g} Wh floor.",
+        (f"Battery needed: {battery.e_max - lowest:.0f} Wh of the {battery.e_max - battery.e_min:.0f} Wh it can use "
+         f"above its {battery.e_min:g} Wh floor." if survives else
+         f"Battery needed: more than the {battery.e_max - battery.e_min:.0f} Wh it can use above its "
+         f"{battery.e_min:g} Wh floor (it drains to {lowest:.0f} Wh)."),
         "Battery model: power = panel power x visible Sun, whatever the Sun's direction (a sun-tracking array), "
         "so survival is an upper bound for fixed panels."]
     why = []
