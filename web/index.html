@@ -7,12 +7,12 @@
 <title>LunarWindow · Where and when to land at the lunar south pole</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#00010A; --bg2:#03060F; --panel:#000312; --panel2:#030A1C; --line:#2A3142;
-  --ink:#E9ECF2; --muted:#8C94A4; --faint:#5E6676;
-  --accent:#2CAEEA; --accent-ink:#E9F6FF; --accent-deep:#00264A; --accent-fill:#00081E;
+  --bg:#05080F; --bg2:#080C15; --panel:#0A0F19; --panel2:#0E1521; --line:#1D2534;
+  --ink:#ECEEF1; --muted:#98A1AF; --faint:#636D7E;
+  --accent:#D3D9E2; --accent-ink:#070B13; --accent-deep:#D3D9E2; --accent-fill:#121A28;
   --sun:#F0A93E; --sun-soft:rgba(240,169,62,.16); --earth:#65B9E1; --earth-soft:rgba(101,185,225,.16);
   --good:#5CC48A; --bad:#EE6A5E; --rock:#3A4250; --rock-line:#6B7586;
   --star:rgba(255,255,255,.55);
@@ -22,7 +22,7 @@
   :root:not([data-theme="dark"]){
     --bg:#EEF1F5; --bg2:#E4E8EE; --panel:#FFFFFF; --panel2:#F4F6F9; --line:#D3DAE4;
     --ink:#0E1522; --muted:#4F5B6E; --faint:#7A8597;
-    --accent:#0F7FA8; --accent-ink:#FFFFFF; --accent-deep:#DCEFFA; --accent-fill:#EEF7FC;
+    --accent:#1A2740; --accent-ink:#FFFFFF; --accent-deep:#1A2740; --accent-fill:#EDF0F5;
     --sun:#C27612; --sun-soft:rgba(194,118,18,.12); --earth:#2462C4; --earth-soft:rgba(36,98,196,.10);
     --good:#2E8A55; --bad:#C2453A; --rock:#BCC3CD; --rock-line:#8E97A5;
     --star:transparent;
@@ -34,9 +34,9 @@
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 72px);scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;overflow-x:hidden}
-#stars,#net{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) #stars,:root:not([data-theme="dark"]) #net{display:none}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.55;font-stretch:100%;overflow-x:hidden}
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) #stars{display:none}}
 main,header,footer{position:relative;z-index:1}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
 .reveal.in{opacity:1;transform:none}
@@ -46,9 +46,9 @@ body.calm .reveal{opacity:1;transform:none;transition:none}
 .card:hover,.stat:hover,.step:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent),0 10px 40px -18px color-mix(in srgb,var(--accent) 60%,transparent)}
 .stat:hover,.step:hover{transform:translateY(-2px)}
 .btn{transition:box-shadow .25s ease,transform .15s ease,background .2s ease}
-.btn.primary:hover{box-shadow:0 0 24px -4px var(--accent)}
+.btn.primary:hover{box-shadow:none}
 .btn:active{transform:scale(.98)}
-.num{font-family:"Barlow Semi Condensed","Barlow",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.num{font-family:"Archivo",system-ui,sans-serif;font-stretch:80%;font-variant-numeric:tabular-nums;letter-spacing:.005em}
 a{color:var(--accent)}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -74,14 +74,18 @@ nav.links a.on{color:var(--accent);background:var(--panel);font-weight:600}
 section.block{padding:64px 0}
 h1,h2,h3{line-height:1.15;margin:0}
 .eyebrow{color:var(--accent);font-weight:600;font-size:.875rem;letter-spacing:.02em;margin-bottom:8px}
-h2.title{font-size:clamp(1.6rem,3.2vw,2.2rem);font-weight:700;margin-bottom:10px}
+h2.title{font-size:clamp(1.6rem,3.2vw,2.3rem);font-weight:640;font-stretch:112%;letter-spacing:-.015em;margin-bottom:10px}
 .lead{color:var(--muted);max-width:62ch;font-size:1.05rem}
 
 /* hero */
 .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:56px 0 40px}
 @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:32px}}
-.hero h1{font-size:clamp(2.2rem,5.4vw,3.6rem);font-weight:700;letter-spacing:-.01em}
-.hero h1 span{color:var(--accent)}
+.hero h1{font-size:clamp(2.3rem,5.6vw,3.9rem);font-weight:640;font-stretch:118%;letter-spacing:-.02em;line-height:1.04;max-width:16ch}
+.heroline{color:var(--muted);font-size:.92rem;margin:0 0 14px}
+.skyband{margin:6px 0 30px}
+#skyCanvas{display:block;width:100%;height:200px}
+@media (max-width:640px){#skyCanvas{height:150px}}
+.skyband figcaption{color:var(--muted);font-size:.86rem;max-width:80ch;margin-top:8px}
 .hero p{color:var(--muted);font-size:1.125rem;max-width:56ch;margin:18px 0 26px}
 .cta{display:flex;flex-wrap:wrap;gap:12px}
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:11px 18px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
@@ -108,7 +112,10 @@ body.calm .pulse-dot{animation:none}
 .moonwin figcaption{position:absolute;left:0;right:0;bottom:0;padding:40px 22% 26px;text-align:center;font-size:.8rem;color:#E8ECF3;background:linear-gradient(transparent,rgba(5,7,13,.85))}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:8px}
 @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.stat{background:none;border:0;border-left:1px solid var(--line);border-radius:0;padding:4px 16px}
+.stats{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;gap:0}
+.stat:first-child{border-left:0;padding-left:0}
+@media (max-width:900px){.stat:nth-child(3){border-left:0;padding-left:0}}
 .stat .v{font-size:1.9rem;font-weight:700;color:var(--ink)}
 .stat .k{color:var(--muted);font-size:.875rem}
 
@@ -135,7 +142,7 @@ body.calm .pulse-dot{animation:none}
 .toggle input{accent-color:var(--accent);width:18px;height:18px}
 .grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:18px;align-items:start}
 @media (max-width:960px){.grid{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
 .card h3{font-size:1.05rem;font-weight:600;margin-bottom:4px}
 .hint{color:var(--muted);font-size:.875rem;margin:0 0 12px}
 .explain{display:none;background:var(--panel2);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;color:var(--ink);font-size:.92rem;margin:10px 0}
@@ -293,7 +300,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
-<canvas id="net" aria-hidden="true"></canvas>
+
 <header class="top">
   <div class="bar">
     <a class="logo" href="#top"><span class="logo-mark" aria-hidden="true"></span>LunarWindow</a>
@@ -308,8 +315,8 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
   <div class="wrap">
     <section class="hero" data-tabgroup="plan">
       <div>
-        <div class="eyebrow">NASA Space Apps 2026 · Lunar Landing Site Navigator</div>
-        <h1>Find where and when to land at the <span>lunar south pole</span></h1>
+        <p class="heroline">NASA Space Apps 2026: Lunar Landing Site Navigator</p>
+        <h1>Find where and when to land at the lunar south pole</h1>
         <p>LunarWindow checks every candidate site against the real terrain around it, hour by hour. It shows when the Sun clears the hills for power, when Earth is in view for contact, and whether the lander survives the mission.</p>
         <div class="cta">
           <a class="btn primary" href="#tab=plan" data-tab="plan" data-goto="planner">Open the planner</a>
@@ -321,12 +328,16 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
           <button class="btn small" id="gLeft">Rotate left</button><button class="btn small" id="gRight">Rotate right</button>
           <button class="btn small" id="gIn">Zoom in</button><button class="btn small" id="gOut">Zoom out</button>
         </div>
-        <div class="ghint">Drag to rotate · tap a marker for details</div>
+        <div class="ghint">Drag to turn the Moon; tap a marker for details</div>
         <canvas id="globe" role="img" aria-label="A 3D Moon you can turn by dragging. Yellow markers are the best landing sites; the south pole shows NASA's real sunlight map."></canvas>
-        <div class="ginfo idle" id="gInfo" aria-live="polite">👆 Tap a yellow marker on the Moon to see that landing site.</div>
-        <figcaption><span class="pulse-dot"></span>The south pole shows NASA's real sunlight map</figcaption>
+        <div class="ginfo idle" id="gInfo" aria-live="polite">Tap a yellow marker on the Moon to see that landing site.</div>
+        <figcaption>The south pole is shaded with NASA's real long-term sunlight map.</figcaption>
       </figure>
     </section>
+    <figure class="skyband" data-tabgroup="plan">
+      <canvas id="skyCanvas" role="img" aria-label="The real skyline around the demo landing site at the Shackleton rim, with the Sun's path over the 14-day mission and Earth at landing"></canvas>
+      <figcaption id="skyCap">Loading the demo site's horizon…</figcaption>
+    </figure>
     <div class="stats">
       <div class="stat"><div class="v num">0.92</div><div class="k">Match with NASA's own sunlight map (correlation, 100 map pixels)</div></div>
       <div class="stat"><div class="v num">0.0003°</div><div class="k">Sun and Earth positions vs NASA JPL Horizons (124 checks)</div></div>
@@ -338,7 +349,6 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 
   <section class="block" id="planner" data-tabgroup="plan" style="padding-top:24px">
     <div class="wrap">
-      <div class="eyebrow">Mission planner</div>
       <h2 class="title">Compare sites, dates and mast heights</h2>
       <div class="databar">
         <span id="dataBadge" class="badge sample">Loading results.json…</span>
@@ -498,7 +508,6 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 
   <div class="wrap">
     <section class="block" id="how" data-tabgroup="learn">
-      <div class="eyebrow">How it works</div>
       <h2 class="title">From terrain to a landing decision</h2>
       <p class="lead">The slow part, every site's skyline, is worked out once. After that, any date is a quick check of "is the Sun above the hills?"</p>
       <div class="card constel-card"><canvas id="constel" aria-label="How it works: candidate sites feed the terrain skyline and the Sun and Earth positions; both feed the power and contact check, which gives the landing decision"></canvas>
@@ -514,21 +523,19 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 
   <section class="block" id="moon" data-tabgroup="learn">
     <div class="wrap">
-      <div class="eyebrow">Why it's hard</div>
       <h2 class="title">On the Moon vs on Earth</h2>
       <p class="lead">The south pole breaks every daylight habit we have. That's why a few hundred metres or a few days can decide a mission.</p>
       <div class="vs">
-        <div class="card"><h3>☀️ The Sun</h3><div class="row"><span>Moon pole</span><span>Never more than about 1.5° above level, circling the horizon</span><span>Earth</span><span>Up to 90°, overhead in the tropics</span></div></div>
-        <div class="card"><h3>🕐 A day</h3><div class="row"><span>Moon</span><span>About 29.5 Earth days, sunrise to sunrise</span><span>Earth</span><span>24 hours</span></div></div>
-        <div class="card"><h3>🌑 Shadows</h3><div class="row"><span>Moon</span><span>No air: no twilight, and shadows are pitch black. Some crater floors never see the Sun</span><span>Earth</span><span>Sky glow lights the shadows</span></div></div>
-        <div class="card"><h3>🌍 Earth in the sky</h3><div class="row"><span>Moon</span><span>Hangs in nearly one spot, bobbing about ±7° over 27 days</span><span>Earth</span><span>The Moon rises and sets daily</span></div></div>
+        <div class="card"><h3>The Sun</h3><div class="row"><span>Moon pole</span><span>Never more than about 1.5° above level, circling the horizon</span><span>Earth</span><span>Up to 90°, overhead in the tropics</span></div></div>
+        <div class="card"><h3>A day</h3><div class="row"><span>Moon</span><span>About 29.5 Earth days, sunrise to sunrise</span><span>Earth</span><span>24 hours</span></div></div>
+        <div class="card"><h3>Shadows</h3><div class="row"><span>Moon</span><span>No air: no twilight, and shadows are pitch black. Some crater floors never see the Sun</span><span>Earth</span><span>Sky glow lights the shadows</span></div></div>
+        <div class="card"><h3>Earth in the sky</h3><div class="row"><span>Moon</span><span>Hangs in nearly one spot, bobbing about ±7° over 27 days</span><span>Earth</span><span>The Moon rises and sets daily</span></div></div>
       </div>
     </div>
   </section>
 
   <section class="block" id="trust" data-tabgroup="learn">
     <div class="wrap">
-      <div class="eyebrow">Why trust it</div>
       <h2 class="title">Checked against NASA, and against ourselves</h2>
       <div class="trust">
         <div class="card"><div class="big num">0.92</div><h3>Matches NASA's sunlight map</h3><p>Our skylines reproduce NASA's long-term sunlight map pixel by pixel around Shackleton's rim (correlation 0.92 at a 2 m height, average difference +0.1 points, 94% of pixels within 10 points).</p></div>
@@ -1369,43 +1376,10 @@ let mapPulse = 0;
   hold($("gLeft"), -1); hold($("gRight"), 1);
   $("gIn").onclick = () => { zoom = Math.min(2.6, zoom * 1.3); need = true; };
   $("gOut").onclick = () => { zoom = Math.max(0.7, zoom / 1.3); need = true; };
-  window.__globeRefresh = () => { picked = null; $("gInfo").classList.add("idle"); $("gInfo").textContent = "👆 Tap a yellow marker on the Moon to see that landing site."; need = true; };
+  window.__globeRefresh = () => { picked = null; $("gInfo").classList.add("idle"); $("gInfo").textContent = "Tap a yellow marker on the Moon to see that landing site."; need = true; };
 })();
 
 /* --- background: a slowly turning 3D network of glowing nodes (like the demo's graph) --- */
-(function network(){
-  const c = $("net"), g = c.getContext("2d"); let W = 0, H = 0, last = 0, t = 0;
-  const R = rng(77), n = 70;
-  const nodes = Array.from({ length: n }, () => ({ p: [(R() - 0.5) * 3.4, (R() - 0.5) * 2.2, (R() - 0.5) * 2.0], s: R() < 0.14 ? 1.9 : 0.7 + R() * 0.8, dark: R() < 0.22 }));
-  const edges = [];
-  nodes.forEach((a, i) => {
-    const near = nodes.map((b, j) => [j, Math.hypot(a.p[0] - b.p[0], a.p[1] - b.p[1], a.p[2] - b.p[2])]).filter(x => x[0] !== i).sort((u, v) => u[1] - v[1]).slice(0, 3);
-    near.forEach(([j]) => { if (i < j || !edges.some(e => e[0] === j && e[1] === i)) edges.push([i, j]); });
-  });
-  function size(){ const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; c.width = W * d; c.height = H * d; g.setTransform(d, 0, 0, d, 0, 0); }
-  size(); addEventListener("resize", size);
-  function frame(ts){
-    const dt = Math.min(50, ts - last); last = ts;
-    if (!document.hidden){
-      if (!calm()) t += dt / 1000;
-      g.clearRect(0, 0, W, H);
-      const a = t * 0.06, b = 0.25 + 0.08 * Math.sin(t * 0.05), sc = Math.max(W, H) * 0.42, scrollShift = scrollY * 0.04;
-      const P = nodes.map(nd => { let [x, y, z] = nd.p; const x1 = x * Math.cos(a) + z * Math.sin(a), z1 = -x * Math.sin(a) + z * Math.cos(a);
-        const y2 = y * Math.cos(b) - z1 * Math.sin(b), z2 = y * Math.sin(b) + z1 * Math.cos(b); const f = 3.4 / (3.4 - z2);
-        return [W / 2 + x1 * f * sc, H / 2 - y2 * f * sc - scrollShift, f, z2]; });
-      g.lineWidth = 1;
-      edges.forEach(([i, j]) => { const fa = Math.min(P[i][2], P[j][2]); g.strokeStyle = `rgba(150,205,240,${(0.05 + 0.13 * (fa - 0.6)).toFixed(3)})`;
-        g.beginPath(); g.moveTo(P[i][0], P[i][1]); g.lineTo(P[j][0], P[j][1]); g.stroke(); });
-      nodes.map((nd, i) => [nd, P[i]]).sort((u, v) => u[1][3] - v[1][3]).forEach(([nd, [x, y, f]]) => {
-        const r = nd.s * 5.6 * f, al = Math.max(0.18, Math.min(0.78, 0.18 + 0.55 * (f - 0.6)));
-        g.fillStyle = nd.dark ? `rgba(36,84,130,${al.toFixed(3)})` : `rgba(96,205,242,${al.toFixed(3)})`;
-        g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
-      });
-    }
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
 
 /* --- the team pipeline as a turning 3D constellation --- */
 (function constellation(){
@@ -1499,6 +1473,47 @@ $("landerSel").onchange = e => {
   const p = PROFILES.find(x => x.id === e.target.value); if (!p || p === PROFILE) return;
   loadProfile(p, { sel: sel ? String(sel.id) : null, mast: selMast, compare: compare.map(s => String(s.id)) });
 };
+(function heroSkyline(){   // the demo site's real horizon and the Sun's and Earth's paths, from its mission file
+  const c = $("skyCanvas"), FILE = DATA_ROOT + "sites/210_10.0.json";
+  let D = null, t0 = 0;
+  const x = (th, W) => (((th - 90 + 180) % 360 + 360) % 360) / 360 * W;        // Earth's side (theta 90) in the middle
+  function track(g, az, el, X, Y, upto){
+    g.beginPath(); let px = null;
+    for (let k = 0; k < upto; k++){ const xx = X(az[k]), yy = Y(el[k]);
+      if (px === null || Math.abs(xx - px) > c.clientWidth / 2) g.moveTo(xx, yy); else g.lineTo(xx, yy); px = xx; }
+    g.stroke();
+  }
+  function draw(f){
+    if (!D) return;
+    const dpr = Math.min(devicePixelRatio || 1, 2), W = c.clientWidth, Hh = c.clientHeight;
+    c.width = W * dpr; c.height = Hh * dpr; const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const th = D.skyline.theta_deg, hz = D.skyline.horizon_deg, h = D.hourly;
+    const all = hz.concat(h.sun_el, [h.earth_el[0]]), lo = Math.min(...all) - 0.25, hi = Math.max(...all) + 0.6;
+    const X = a => x(a, W), Y = e => Hh - 18 - (e - lo) / (hi - lo) * (Hh - 30);
+    g.clearRect(0, 0, W, Hh);
+    const order = th.map((a, i) => [X(a), Y(hz[i])]).sort((a, b) => a[0] - b[0]);
+    g.beginPath(); g.moveTo(0, Hh); order.forEach(([xx, yy]) => g.lineTo(xx, yy)); g.lineTo(W, Hh); g.closePath();
+    const grd = g.createLinearGradient(0, 0, 0, Hh); grd.addColorStop(0, css("--rock")); grd.addColorStop(1, css("--bg"));
+    g.fillStyle = grd; g.fill();
+    g.strokeStyle = css("--rock-line"); g.lineWidth = 1; g.beginPath(); order.forEach(([xx, yy], i) => i ? g.lineTo(xx, yy) : g.moveTo(xx, yy)); g.stroke();
+    const n = Math.max(2, Math.round(h.sun_az.length * f));
+    g.lineWidth = 1.5; g.strokeStyle = css("--sun"); track(g, h.sun_az, h.sun_el, X, Y, n);
+    const disc = (az, el, col, r) => { g.fillStyle = col; g.beginPath(); g.arc(X(az), Y(el), r, 0, 7); g.fill(); };
+    disc(h.earth_az[0], h.earth_el[0], css("--earth"), 6); disc(h.sun_az[0], h.sun_el[0], css("--sun"), 5);
+    g.fillStyle = css("--muted"); g.font = "12px Archivo, system-ui, sans-serif"; g.textAlign = "center";
+    g.fillText("toward Earth", W / 2, Hh - 3); g.textAlign = "left"; g.fillText("away from Earth", 2, Hh - 3);
+    g.textAlign = "right"; g.fillText("away from Earth", W - 2, Hh - 3);
+  }
+  function grow(ts){ if (!t0) t0 = ts; const f = Math.min(1, (ts - t0) / 2600); draw(f); if (f < 1) requestAnimationFrame(grow); }
+  getJSON(FILE).then(d => {
+    D = d; const h = d.hourly;
+    $("skyCap").textContent = `The real horizon around our demo site on the Shackleton rim (site ${d.site.id}, panels ${d.mast_m} m up), from NASA LOLA terrain, ` +
+      `with the Sun's path (amber) over the ${Math.round(d.mission.hours / 24)} days after landing at ${hourTxt(d.mission.start_utc)} and Earth (blue) at landing. ` +
+      `Heights are stretched: the Sun never climbs more than ${fmt(Math.max(...h.sun_el), 1)}° above level here, and the skyline decides everything.`;
+    if (calm()) draw(1); else requestAnimationFrame(grow);
+    addEventListener("resize", () => draw(1));
+  }).catch(err => { $("skyCap").textContent = `Couldn't load ${FILE}: ${err.message}`; });
+})();
 Promise.all([getJSON(PROFILES_FILE), getJSON(NAMED), getJSON(REGION_FILE)]).then(([profiles, named, region]) => {
   if (!Array.isArray(profiles) || !profiles.length) throw new Error(`${PROFILES_FILE} has no lander presets`);
   PROFILES = profiles; NAMED_SITES = named; REGION = region;
