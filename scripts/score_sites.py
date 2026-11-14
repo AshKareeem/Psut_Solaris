@@ -313,6 +313,10 @@ def miss_table(rows, nb, parent_x, parent_y, s_nb, e_nb, met_nb, m, k, hours, mi
     return out
 
 
+FAIL_WORDS = {"sun at touchdown": "the Sun is under half visible at touchdown",
+              "earth at touchdown": "Earth is out of view at touchdown",
+              "earth for the mission": "Earth is in view for under half the mission",
+              "battery": "the battery drops below its reserve"}
 BASIS_WORDS = {"within 100 m": "within 100 m",
                "exact point": "on the exact point (no date here is safe if the lander misses by 100 m)"}
 
@@ -340,8 +344,9 @@ def risk_words(margin, ladder, miss, lon, slope_of, basis):
             theta = float(np.degrees(np.arctan2(row["dy_m"], row["dx_m"])))
             where = (f"the point {dist:.0f} m toward bearing {bearing(theta, lon):.0f} deg" if dist
                      else "the target point itself")
-            why = row["fails"] + (f" ({slope_of[row['point']]:.1f} deg)" if row["fails"] == "slope" else "")
-            words.append(f"Missed by up to 100 m: {n_ok} of {len(miss)} points safe; {where} fails on {why}.")
+            why = (f"its ground slopes {slope_of[row['point']]:.1f} deg over 100 m" if row["fails"] == "slope"
+                   else FAIL_WORDS[row["fails"]])
+            words.append(f"Missed by up to 100 m: {n_ok} of {len(miss)} points safe; at {where}, {why}.")
     return words
 
 

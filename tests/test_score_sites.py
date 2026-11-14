@@ -252,5 +252,5 @@ def test_miss_table_agrees_with_safe_100m_and_a_steep_point_fails_on_slope_first
     # a site with no date safe within 100 m counts its delays on the exact point, and says so
     on_point = risk_words(1, [], None, 0.0, None, "exact point")
     assert on_point[0].startswith("Only the headline hour itself is safe on the exact point (no date here is safe")
-    assert words[1] == ("Missed by up to 100 m: 1 of 2 points safe; the point 100 m toward bearing 90 deg "
-                        "fails on slope (12.0 deg).")
+    assert words[1] == ("Missed by up to 100 m: 1 of 2 points safe; at the point 100 m toward bearing 90 deg, "
+                        "its ground slopes 12.0 deg over 100 m.")
