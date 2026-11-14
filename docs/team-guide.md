@@ -817,7 +817,7 @@ python scripts/validate_pgda.py data/ldem_75s_240m.lbl data/ldem_875s_20m.lbl da
 | **Blocker distance** | how far away the terrain that sets the skyline is |
 | **Mast** | the height of the panels and antenna above the ground (0, 2, 5 or 10 m) |
 | **Clearance** | how far the Sun's centre (or Earth's top) is above the skyline; negative means hidden |
-| **DTE** | direct-to-Earth: a radio link straight to Earth, with no relay satellite |
+| **DTE** | direct-to-Earth: a radio link straight to Earth, with no relay satellite. A **DTE window** is each stretch of time when Earth is above the lander's skyline (Earthrise to Earthset); the page lists them for every mission |
 | **Touchdown** | the landing hour: it needs more than half the Sun and some of Earth in view |
 | **Safe landing hour / day** | a landing that passes touchdown, Earth for half the mission, and the battery; a day is safe if any of its hours is |
 | **Within 100 m** | safe at all 17 points within 100 m of the target |

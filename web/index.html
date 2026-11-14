@@ -94,6 +94,7 @@ h2.title{font-size:clamp(1.6rem,3.2vw,2.2rem);font-weight:700;margin-bottom:10px
 .gctl .btn{background:var(--panel2)}
 .ghint{display:inline-block;font-size:.78rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:2px 8px;margin-bottom:6px;background:var(--panel)}
 .ginfo{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--muted);font-size:.92rem;text-align:left;margin-top:6px}
+.ginfo.idle{background:none;border:none;padding:6px 0 0;text-align:center;font-size:.88rem;user-select:none;-webkit-user-select:none;cursor:default}
 .ginfo b{color:var(--ink)}
 .ginfo .btn{margin-top:8px}
 #globe.dragging{cursor:grabbing}
@@ -252,6 +253,8 @@ canvas{display:block;width:100%}
 .batline.ok{border-left:3px solid var(--good)}
 .batline.warn{border-left:3px solid var(--sun)}
 .batline.bad{border-left:3px solid var(--bad)}
+.dtebox{margin:0 0 14px}
+.dtebox h4{margin:0 0 2px;font-size:.92rem}
 .linkbtn{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;font:inherit;cursor:pointer}
 #elev{height:190px;margin-top:6px}
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
@@ -320,7 +323,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         </div>
         <div class="ghint">Drag to rotate · tap a marker for details</div>
         <canvas id="globe" role="img" aria-label="A 3D Moon you can turn by dragging. Yellow markers are the best landing sites; the south pole shows NASA's real sunlight map."></canvas>
-        <div class="ginfo" id="gInfo" aria-live="polite">Select a marker to see a landing site.</div>
+        <div class="ginfo idle" id="gInfo" aria-live="polite">👆 Tap a yellow marker on the Moon to see that landing site.</div>
         <figcaption><span class="pulse-dot"></span>The south pole shows NASA's real sunlight map</figcaption>
       </figure>
     </section>
@@ -390,9 +393,9 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <details class="glossary"><summary>What these words mean</summary><dl>
               <dt>Skyline</dt><dd>the horizon the lander sees: how high the hills rise in every direction</dd>
               <dt>Height (mast)</dt><dd>how high the solar panels and antenna sit above the ground</dd>
-              <dt>Safe landing day</dt><dd>a day with at least one landing hour that gives power and Earth contact at touchdown, Earth in view for half the mission, and a battery that never runs below its reserve</dd>
+              <dt>Safe landing day</dt><dd>a day with at least one landing hour that gives power and direct-to-Earth (DTE) contact at touchdown, Earth in view for half the mission, and a battery that never runs below its reserve</dd>
               <dt>Within 100 m</dt><dd>still safe if the lander misses its target by up to 100 m (NASA's landing accuracy), checked at 17 points, each on ground under 10°</dd>
-              <dt>Earth contact</dt><dd>direct radio to Earth, with no relay satellite: Earth must be above the skyline</dd>
+              <dt>Direct-to-Earth (DTE) contact</dt><dd>radio straight from the lander to Earth, with no relay satellite. It works only while Earth is above the skyline the lander sees; each stretch of time when it is, from Earthrise to Earthset, is a DTE window.</dd>
             </dl></details>
             <p class="hint" id="safeDef"></p>
             <div class="explain">Raising the solar panels and antenna lifts them above nearby hills. At the pole the Sun skims the horizon, so a few metres can turn a dark spot into a sunny one.</div>
@@ -417,8 +420,13 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
               <input type="range" id="scrub" min="0" max="335" value="0" aria-label="Mission hour">
               <div class="clock num" id="clock"></div>
             </div>
-            <canvas id="tline" aria-label="Sunlight, Earth contact and battery on the same playhead as the skyline; tap or drag to move through the mission"></canvas>
+            <canvas id="tline" aria-label="Sunlight, direct-to-Earth (DTE) contact and battery on the same playhead as the skyline; tap or drag to move through the mission"></canvas>
             <p class="batline" id="batLine" aria-live="polite"></p>
+            <div class="dtebox" id="dteBox">
+              <h4>Direct-to-Earth (DTE) windows during this mission</h4>
+              <div class="tablewrap"><table class="fs-ladder" id="dteTable"></table></div>
+              <p class="hint" id="dteNote" style="margin:6px 0 0"></p>
+            </div>
             <div class="explain">Grey is the terrain the lander sees; point at it to see how far away the hill is that sets the horizon. The orange disc is the Sun and the blue disc is Earth, drawn at the hour you pick. When the Sun sinks behind the grey, the panels stop charging. When Earth sinks, the lander can't talk home.</div>
             <h3 style="margin-top:14px">Solar elevation</h3>
             <p class="hint">The Sun's height (orange) against the terrain in its direction (grey). The gap between them is your power margin.</p>
@@ -786,7 +794,7 @@ function renderSite(){
     ["Safe if you miss by up to 100 m", e.safe_days_within_100m == null ? "not checked" : e.safe_days_within_100m + " days", ""],
   ];
   if (best) tiles.push(
-    ["Sunlit", pct(e.f_sun), "sun"], ["Earth in view", pct(e.f_earth), "earth"], ["Sun and Earth together", pct(e.f_both), ""],
+    ["Sunlit", pct(e.f_sun), "sun"], ["Earth in view (DTE)", pct(e.f_earth), "earth"], ["Sun and Earth together", pct(e.f_both), ""],
     ["Longest darkness (cold soak)", e.longest_dark_h + " h", ""], ["Battery needed, worst safe landing of " + years(), Math.round(e.battery_needed_Wh) + " Wh", ""]);
   $("tiles").innerHTML = tiles.map(tile).join("");
   $("tilesNote").textContent = best ? `Sunlit, Earth and darkness are for the landing played below: ${hourTxt(e.headline_start)}, ${DATA.meta.mission_days} days${e.headline_within_100m ? ", safe within 100 m" : ", exact point"}. Battery needed is the most any safe landing in ${years()} draws.` : "";
@@ -832,18 +840,19 @@ function renderPlayerHead(){
   $("psVerdict").textContent = S.safe_landing ? "Safe landing" : "Not a safe landing";
   $("psVerdict").className = "ps-chip " + (S.safe_landing ? "good" : "bad");
   $("psMain").textContent = `${custom ? "Your mission" : "Site " + s.id} · ${d.mast_m} m · landing ${hourTxt(d.mission.start_utc)} · ` +
-    `Earth in view ${Math.round(S.f_earth * 100)}% · lowest battery ${Math.round(S.battery_lowest_Wh)} Wh`;
+    `Earth in view (DTE) ${Math.round(S.f_earth * 100)}% · lowest battery ${Math.round(S.battery_lowest_Wh)} Wh`;
   if (custom){
     const st = custom.site, G = DATA.meta.gates;
     $("heightNote").textContent = `Your parameters at ${fmt(st.lat, 4)}°, ${fmt(st.lon, 3)}°: ground slope ${fmt(st.slope_deg, 1)}° over 100 m ` +
       `(${st.slope_deg < G.slope_max_deg ? "within" : "steeper than"} the ${G.slope_max_deg}° landing limit), terrain ${st.terrain.join(" + ")}. Pick a site from Best sites to go back.`;
-    listInto($("story"), d.verdict.concat(d.why)); renderFailsafe(d); return;
+    listInto($("story"), d.verdict.concat(d.why)); renderDte(d); renderFailsafe(d); return;
   }
   const e = mastEntry(s, selMast);
   $("heightNote").textContent = e.headline_within_100m
     ? "The landing shown above: the best date that stays safe wherever the lander touches down within 100 m."
     : "The landing shown above: the best date on the exact point (no date here stays safe at every point within 100 m).";
   listInto($("story"), d.verdict.concat(d.why));
+  renderDte(d);
   renderFailsafe(d);
 }
 function fsItem(title, html){ return `<div class="fs-item"><h4>${title}</h4>${html}</div>`; }
@@ -853,6 +862,27 @@ function fsDots(miss){   // the 17 points within 100 m, map view (north of the s
   return `<svg class="fs-dots" width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="The 17 landing points within 100 m: green safe, red not">` +
     `<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="var(--line)"/><circle cx="${c}" cy="${c}" r="${R / 2}" fill="none" stroke="var(--line)" stroke-dasharray="3 3"/>${dots}</svg>`;
 }
+// "Direct-to-Earth (DTE) windows": the mission file's events.dte listed as given (scripts/events.py computes them).
+// Only time arithmetic here: a window already open at landing (start null) or still open at the end (end null)
+// is clipped to the mission for its length.
+const minuteTxt = t => `${t.slice(0, 10)} ${t.slice(11, 16)} UTC`;
+function renderDte(d){
+  const w = d.events.dte, t0 = ms(d.mission.start_utc), t1 = t0 + d.mission.hours * 3600e3;
+  if (!w.length){
+    $("dteTable").innerHTML = "";
+    $("dteNote").textContent = "No DTE window: Earth never clears the skyline during this mission.";
+    return;
+  }
+  const len = x => { const h = ((x.end == null ? t1 : ms(x.end)) - (x.start == null ? t0 : ms(x.start))) / 3600e3;
+                     return h >= 10 ? `${Math.round(h)} h` : `${fmt(h, 1)} h`; };
+  $("dteTable").innerHTML = "<tr><th>Opens</th><th>Closes</th><th>Length</th></tr>" + w.map(x =>
+    `<tr><td>${x.start == null ? "at landing" : esc(minuteTxt(x.start))}</td>` +
+    `<td>${x.end == null ? "after the mission" : esc(minuteTxt(x.end))}</td><td>${len(x)}</td></tr>`).join("");
+  $("dteNote").textContent = w.length === 1 && w[0].start == null && w[0].end == null
+    ? "Earth stays in view the whole mission."
+    : `Longest time without contact: ${d.summary.longest_earth_blackout_h} h.`;
+}
+
 function renderFailsafe(d){   // the failsafe blocks of the mission file, shown as given (docs/ui-data-contract.md)
   const el = $("fsGrid"); if (!el) return;
   const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
@@ -867,7 +897,7 @@ function renderFailsafe(d){   // the failsafe blocks of the mission file, shown 
   }
   const w = d.words || [];
   const cp = d.contact_plan;
-  items.push(fsItem("Earth contact plan", `<p>${esc(w[0] || "")}</p>` + (cp.windows.length ? li(cp.windows.map(x => `${x.covers.join(", ")}: ` + (x.start == null && x.end == null ? "Earth in view the whole mission"
+  items.push(fsItem("Direct-to-Earth (DTE) contact plan", `<p>${esc(w[0] || "")}</p>` + (cp.windows.length ? li(cp.windows.map(x => `${x.covers.join(", ")}: ` + (x.start == null && x.end == null ? "Earth in view the whole mission"
     : `${x.start ? x.start.slice(0, 16).replace("T", " ") + " UTC" : "from landing"} to ${x.end ? x.end.slice(0, 16).replace("T", " ") + " UTC" : "the end of the mission"}`))) : "")));
   items.push(fsItem("If the Sun goes down", `<p>${esc(w[1] || "")}</p>` + (d.dark_verdict.length ? li(d.dark_verdict.slice(0, 4).map(x => `${hourTxt(x.start)}: ${x.hours} h dark, battery ${Math.round(x.battery_start_Wh)} → ${Math.round(x.battery_lowest_Wh)} Wh, ${x.lasts ? "lasts" : "runs out"}`)) : "")));
   const wb = d.weak_battery;
@@ -956,7 +986,7 @@ function drawTimeline(S, i){
   const c = $("tline"); const [g, W, H] = setup(c); const { d, h, n, t0 } = S, Lr = lander();
   const L = W < 520 ? 74 : 104, R = 8, X = k => L + k / n * (W - L - R), bw = (W - L - R) / n + 0.6;
   const hourOf = (t, edge) => t == null ? edge : (ms(t) - t0) / 3600e3;
-  const rows = [["Sunlight", 2, 24], [W < 520 ? "Earth" : "Earth contact", 30, 10], ["Both", 44, 10]];
+  const rows = [["Sunlight", 2, 24], [W < 520 ? "DTE" : "DTE contact", 30, 10], ["Both", 44, 10]];
   g.fillStyle = css("--muted"); g.textAlign = "left"; rows.forEach(([t, y, hh]) => g.fillText(t, 0, y + hh / 2 + 4));
   g.fillStyle = css("--sun"); h.sun_fraction.forEach((v, k) => { const hh = 24 * v; g.fillRect(X(k), 2 + 24 - hh, bw, hh); });
   g.fillStyle = css("--earth"); h.earth_visible.forEach((v, k) => { if (v) g.fillRect(X(k), 30, bw, 10); });
@@ -1111,7 +1141,7 @@ function drawCompare(){
     ["Safe landing days", s => col(s).safe_landing_days],
     ["Safe within 100 m", s => col(s).safe_days_within_100m == null ? "not checked" : col(s).safe_days_within_100m],
     ["Landing played", onBest(e => e.headline_start.slice(0, 10) + (e.headline_within_100m ? "" : " (exact point)"))],
-    ["Sunlit", onBest(e => pct(e.f_sun))], ["Earth in view", onBest(e => pct(e.f_earth))], ["Sun and Earth together", onBest(e => pct(e.f_both))],
+    ["Sunlit", onBest(e => pct(e.f_sun))], ["Earth in view (DTE)", onBest(e => pct(e.f_earth))], ["Sun and Earth together", onBest(e => pct(e.f_both))],
     ["Longest darkness", onBest(e => e.longest_dark_h + " h")], ["Battery needed (worst safe landing)", onBest(e => Math.round(e.battery_needed_Wh) + " Wh")],
     ["Best dates", onBest(e => dates(e).map(x => x.slice(0, 10)).join("<br>"))],
   ];
@@ -1198,7 +1228,7 @@ let mapPulse = 0;
   let col = null, rel = null, pol = null;
   Promise.all([pixels("assets/moon_color.jpg"), pixels("assets/moon_relief.png"), pixels(BASEMAPS.sun_full.src)])
     .then(([a, b, c]) => { col = a; rel = b; pol = { ...c, b: BASEMAPS.sun_full }; need = true; })
-    .catch(err => { $("gInfo").textContent = "Moon textures missing: " + err.message + " (run scripts/build_web.py)."; });
+    .catch(err => { $("gInfo").classList.remove("idle"); $("gInfo").textContent = "Moon textures missing: " + err.message + " (run scripts/build_web.py)."; });
 
   let yaw = 2.2, tilt = -1.2, zoom = 1, need = true, visible = true, dragging = null, moved = false, lastT = 0, N = 0, g = null, img = null, spin = 0;
   let marks = [];   // [{s, sx, sy}] on screen this frame
@@ -1299,7 +1329,7 @@ let mapPulse = 0;
   }
   let picked = null;
   function pick(s){
-    picked = s; need = true;
+    picked = s; need = true; $("gInfo").classList.remove("idle");
     if (s.kind){   // a named site: replay it in the mission panel
       $("gInfo").innerHTML = `<b>${s.name}</b> · ${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}°` + (s.landed_utc ? `<br>Landed ${hourTxt(s.landed_utc)}` : "") +
         `<br><button class="btn small" id="gOpen">Replay this landing</button>`;
@@ -1339,7 +1369,7 @@ let mapPulse = 0;
   hold($("gLeft"), -1); hold($("gRight"), 1);
   $("gIn").onclick = () => { zoom = Math.min(2.6, zoom * 1.3); need = true; };
   $("gOut").onclick = () => { zoom = Math.max(0.7, zoom / 1.3); need = true; };
-  window.__globeRefresh = () => { picked = null; $("gInfo").textContent = "Select a marker to see a landing site."; need = true; };
+  window.__globeRefresh = () => { picked = null; $("gInfo").classList.add("idle"); $("gInfo").textContent = "👆 Tap a yellow marker on the Moon to see that landing site."; need = true; };
 })();
 
 /* --- background: a slowly turning 3D network of glowing nodes (like the demo's graph) --- */

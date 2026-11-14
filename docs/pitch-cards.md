@@ -12,6 +12,12 @@
 | 5:00–6:15 | CE 3, then IoT | **Evidence.** CE 3: "Every landing hour is tested against NASA's Artemis rules, and we rank by counts, not weights." IoT: "The battery is a Nova-C-class model with sources; survival is an upper bound." Then the numbers: **0.0003° against NASA JPL Horizons, r = 0.92 against NASA's sunlight map, 152 tests, and the demo passes on NASA Moon Trek's 5 m terrain too.** | slide 5 |
 | 6:15–7:00 | Business | **Honest limits, AI use, impact, next.** "Built before and during the event (git tag); written with AI, verified by tests and NASA checks. It costs nothing to run. Next: fixed-panel geometry, newer 5 m terrain, traverse planning." | slides 6–7 |
 
+**The direct-to-Earth moment** (about 30 s, right after the failsafe card; needs the local server):
+1. Point at the **"Direct-to-Earth (DTE) windows"** list: for the demo landing, one window for all 336 h.
+2. In **Plan your own mission**: site 210 (lat −89.7786, lon −155.7256), 10 m, landing **2026-02-04 07:00 UTC**, 14 days.
+3. The window closes at **14:09 UTC, about 7 h after landing**, and Earth stays hidden for **303 h** (12.6 days).
+4. Say: *"Same spot, same lander, two weeks later: no contact with Earth for 12 days. That's why we compare dates, not just places."*
+
 **If a judge asks "is it only one crater?":**
 1. Open the **"The region"** tab (or the link `index.html#tab=region`): all 2,436 sites within 6°, the best at your height.
 2. Then, live in **Plan your own mission** (local server):
