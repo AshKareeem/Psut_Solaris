@@ -13,7 +13,7 @@
 | 6:15–7:00 | Business | **Honest limits, AI use, impact, next.** "Built before and during the event (git tag); written with AI, verified by tests and NASA checks. It costs nothing to run. Next: fixed-panel geometry, newer 5 m terrain, traverse planning." | slides 6–7 |
 
 **If a judge asks "is it only one crater?":**
-1. Scroll to **"The whole region"** card: all 2,436 sites within 6°, the best at your height.
+1. Open the **"The region"** tab (or the link `index.html#tab=region`): all 2,436 sites within 6°, the best at your height.
 2. Then, live in **Plan your own mission** (local server):
    - latitude −87.04745, longitude −24.1866;
    - 2 m height;

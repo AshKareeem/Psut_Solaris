@@ -63,6 +63,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 nav.links{display:flex;gap:4px;margin-left:auto}
 nav.links a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:6px}
 nav.links a:hover{color:var(--ink);background:var(--panel)}
+nav.links a.on{color:var(--accent);background:var(--panel);font-weight:600}
+[data-tabgroup]:not(.tab-on){display:none !important}
+#compareCard,#planner,#moon,#trust{scroll-margin-top:84px}
 .menu-btn{display:none;margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:8px;width:42px;height:38px}
 @media (max-width:760px){nav.links{display:none;position:absolute;left:0;right:0;top:100%;flex-direction:column;background:var(--bg2);border-bottom:1px solid var(--line);padding:8px 12px}
   nav.links.open{display:flex} .menu-btn{display:block}}
@@ -138,7 +141,9 @@ body.calm .pulse-dot{animation:none}
 body.simple .explain{display:block}
 .col{display:flex;flex-direction:column;gap:18px;min-width:0}
 /* comparison and mission player side by side */
-.duo{display:grid;grid-template-columns:minmax(320px,.95fr) 1.15fr;gap:18px;align-items:start;margin-top:18px;scroll-margin-top:84px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin-top:18px;scroll-margin-top:84px}
+.sidecol{display:contents}
+#playerCard{margin-top:18px}
 #compareCard{position:sticky;top:calc(env(safe-area-inset-top,0px) + 78px);max-height:calc(100vh - 96px);overflow:auto}
 #compareCard th,#compareCard td{padding:7px 6px;font-size:.86rem}
 #compareCard td{white-space:nowrap;min-width:62px}
@@ -146,7 +151,7 @@ body.simple .explain{display:block}
 #compareCard th.cur,#compareCard td.cur{background:var(--accent-fill)}
 #compareCard th.cur{box-shadow:inset 0 2px 0 var(--accent)}
 .cmpsel{font-weight:600}
-@media (max-width:960px){.duo{grid-template-columns:1fr} #compareCard{position:static;max-height:none} .sidecol{order:2} #playerCard{order:1}}
+@media (max-width:960px){.duo{grid-template-columns:1fr} #compareCard{position:static;max-height:none}}
 /* lander presets */
 #landerCard{margin-bottom:18px}
 .landerrow{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:8px 24px;align-items:start}
@@ -199,6 +204,11 @@ canvas{display:block;width:100%}
 .failsafe{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
 .failsafe h3{margin:0 0 4px}
 .fs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px}
+.pstick{position:sticky;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:6;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;padding:7px 12px;margin:0 0 12px;font-size:.92rem}
+#psMain{color:var(--muted)}
+.ps-chip{border-radius:999px;padding:2px 10px;font-weight:700;font-size:.78rem;letter-spacing:.02em}
+.ps-chip.good{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid color-mix(in srgb,var(--good) 40%,transparent)}
+.ps-chip.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent)}
 .fs-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .fs-item h4{margin:0 0 6px;font-size:.95rem}
 .fs-item p{margin:0 0 6px;font-size:.92rem}
@@ -286,21 +296,21 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     <a class="logo" href="#top"><span class="logo-mark" aria-hidden="true"></span>LunarWindow</a>
     <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">☰</button>
     <nav class="links" id="nav">
-      <a href="#planner">Planner</a><a href="#mission">Your mission</a><a href="#compare">Compare</a><a href="#moon">Moon vs Earth</a><a href="#trust">Why trust it</a><a href="#about">About</a>
+      <a href="#tab=plan" data-tab="plan" class="on">Planner</a><a href="#tab=region" data-tab="region">The region</a><a href="#tab=mission" data-tab="mission">Your mission</a><a href="#tab=plan" data-tab="plan" data-goto="compare">Compare</a><a href="#tab=learn" data-tab="learn" data-goto="moon">Moon vs Earth</a><a href="#tab=learn" data-tab="learn" data-goto="trust">Why trust it</a><a href="#about">About</a>
     </nav>
   </div>
 </header>
 
 <main id="top">
   <div class="wrap">
-    <section class="hero">
+    <section class="hero" data-tabgroup="plan">
       <div>
         <div class="eyebrow">NASA Space Apps 2026 · Lunar Landing Site Navigator</div>
         <h1>Find where and when to land at the <span>lunar south pole</span></h1>
         <p>LunarWindow checks every candidate site against the real terrain around it, hour by hour. It shows when the Sun clears the hills for power, when Earth is in view for contact, and whether the lander survives the mission.</p>
         <div class="cta">
-          <a class="btn primary" href="#planner">Open the planner</a>
-          <a class="btn" href="#trust">How we know it's right</a>
+          <a class="btn primary" href="#tab=plan" data-tab="plan" data-goto="planner">Open the planner</a>
+          <a class="btn" href="#tab=learn" data-tab="learn" data-goto="trust">How we know it's right</a>
         </div>
       </div>
       <figure class="globewrap" style="margin:0">
@@ -323,7 +333,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 
   </div>
 
-  <section class="block" id="planner" style="padding-top:24px">
+  <section class="block" id="planner" data-tabgroup="plan" style="padding-top:24px">
     <div class="wrap">
       <div class="eyebrow">Mission planner</div>
       <h2 class="title">Compare sites, dates and mast heights</h2>
@@ -390,25 +400,13 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         </div>
       </div>
 
-      <div class="duo" id="compare">
-        <div class="col sidecol">
-          <div class="card" id="rankCard">
-            <h3 id="rankTitle">Best sites</h3>
-            <div class="howrank" id="rankHint"></div>
-            <ol class="rank" id="rank"></ol>
-          </div>
-          <div class="card" id="compareCard">
-            <h3>Compare sites</h3>
-            <p class="hint" id="cmpLead">Add up to four sites with "Add to comparison". Tap a site's name here to play its mission beside it.</p>
-            <div class="tablewrap"><table id="cmp"></table></div>
-          </div>
-        </div>
         <div class="card" id="playerCard">
           <div class="player-top">
             <div><h3>Play the mission</h3><p class="hint" id="playHint" style="margin:0"></p></div>
             <div class="seg" role="group" aria-label="Skyline view"><button data-view="follow" aria-pressed="true">Follow the Sun</button><button data-view="full" aria-pressed="false">Full 360°</button></div>
           </div>
           <div id="playerBody">
+            <div class="pstick" id="pstick"><span class="ps-chip" id="psVerdict"></span><span id="psMain"></span></div>
             <p class="hint" id="heightNote"></p>
             <ul class="story" id="story"></ul>
             <div class="count" id="count"></div>
@@ -433,18 +431,38 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
           </div>
           <p class="note" id="playerNote" hidden></p>
         </div>
+
+      <div class="duo" id="compare">
+        <div class="col sidecol">
+          <div class="card" id="rankCard">
+            <h3 id="rankTitle">Best sites</h3>
+            <div class="howrank" id="rankHint"></div>
+            <ol class="rank" id="rank"></ol>
+          </div>
+          <div class="card" id="compareCard">
+            <h3>Compare sites</h3>
+            <p class="hint" id="cmpLead">Add up to four sites with "Add to comparison". Tap a site's name here to play its mission in the player above.</p>
+            <div class="tablewrap"><table id="cmp"></table></div>
+          </div>
+        </div>
       </div>
 
+    </div>
+  </section>
+
+  <section class="block" id="regionSec" data-tabgroup="region" style="padding-top:28px"><div class="wrap">
       <div class="card" id="regionCard">
         <h3>The whole region: is it only one crater?</h3>
         <p class="hint" id="regionHint"></p>
         <div style="overflow-x:auto"><table class="fs-ladder" id="regionTable"></table></div>
-        <p class="hint" style="margin-top:8px">The planner above shows the 400-site demo grid at the Shackleton rim. The same pipeline (same rules, the 100 m check with slopes) ran on all candidate sites within 6° of the pole, 5 km apart. Sites more than 5° from the pole are beyond our convergence study. Survival is at best (sun-tracking panels).</p>
+        <p class="hint" style="margin-top:8px">The Planner tab shows the 400-site demo grid at the Shackleton rim. The same pipeline (same rules, the 100 m check with slopes) ran on all candidate sites within 6° of the pole, 5 km apart. Sites more than 5° from the pole are beyond our convergence study. Survival is at best (sun-tracking panels).</p>
       </div>
+  </div></section>
 
+  <section class="block" id="missionSec" data-tabgroup="mission" style="padding-top:28px"><div class="wrap">
       <div class="card mission" id="mission">
         <h3>Plan your own mission</h3>
-        <p class="hint">Set every parameter by hand: where, when, how high, and the lander's power. The team's Python pipeline runs it in a few seconds (horizon engine on NASA LOLA terrain, NASA SPICE for the Sun and Earth, the battery model) and the result plays above. It needs the local server: <code>python scripts/serve.py</code>.</p>
+        <p class="hint">Set every parameter by hand: where, when, how high, and the lander's power. The team's Python pipeline runs it in a few seconds (horizon engine on NASA LOLA terrain, NASA SPICE for the Sun and Earth, the battery model) and the result opens in the Planner tab. It needs the local server: <code>python scripts/serve.py</code>.</p>
         <form id="mForm" class="mgrid" novalidate>
           <label class="wide">Start from<select id="mPreset"></select></label>
           <fieldset><legend>Where</legend>
@@ -468,11 +486,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
           <div class="mrun"><button class="btn primary" type="submit" id="mRun">Run mission</button><span class="st" id="mStatus" role="status"></span></div>
         </form>
       </div>
-    </div>
-  </section>
+  </div></section>
 
   <div class="wrap">
-    <section class="block" id="how">
+    <section class="block" id="how" data-tabgroup="learn">
       <div class="eyebrow">How it works</div>
       <h2 class="title">From terrain to a landing decision</h2>
       <p class="lead">The slow part, every site's skyline, is worked out once. After that, any date is a quick check of "is the Sun above the hills?"</p>
@@ -487,7 +504,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     </section>
   </div>
 
-  <section class="block" id="moon">
+  <section class="block" id="moon" data-tabgroup="learn">
     <div class="wrap">
       <div class="eyebrow">Why it's hard</div>
       <h2 class="title">On the Moon vs on Earth</h2>
@@ -501,7 +518,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     </div>
   </section>
 
-  <section class="block" id="trust">
+  <section class="block" id="trust" data-tabgroup="learn">
     <div class="wrap">
       <div class="eyebrow">Why trust it</div>
       <h2 class="title">Checked against NASA, and against ourselves</h2>
@@ -810,6 +827,11 @@ function renderPlayerHead(){
   }
   $("scrub").max = d.mission.hours - 1; $("scrub").value = cursor;
   $("playHint").textContent = `${custom ? "Your mission · " : ""}Landing ${hourTxt(d.mission.start_utc)} · ${d.mast_m} m height · ${+(d.mission.hours / 24).toFixed(1)} days`;
+  const S = d.summary;   // the essentials that stay on screen while the long player and failsafe area scrolls
+  $("psVerdict").textContent = S.safe_landing ? "Safe landing" : "Not a safe landing";
+  $("psVerdict").className = "ps-chip " + (S.safe_landing ? "good" : "bad");
+  $("psMain").textContent = `${custom ? "Your mission" : "Site " + s.id} · ${d.mast_m} m · landing ${hourTxt(d.mission.start_utc)} · ` +
+    `Earth in view ${Math.round(S.f_earth * 100)}% · lowest battery ${Math.round(S.battery_lowest_Wh)} Wh`;
   if (custom){
     const st = custom.site, G = DATA.meta.gates;
     $("heightNote").textContent = `Your parameters at ${fmt(st.lat, 4)}°, ${fmt(st.lon, 3)}°: ground slope ${fmt(st.slope_deg, 1)}° over 100 m ` +
@@ -1061,6 +1083,7 @@ $("mForm").onsubmit = async e => {
     if (!r.ok) throw new Error(out.error + (/does not reach/.test(out.error) ? ". For sites north of about 81.5° S pick “240 m map only”" : ""));
     custom = out; stop(); cursor = 0; renderPlayerHead(); drawPlayer();
     st.textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(1)} s. Your mission is playing above.`;
+    showTab("plan");
     $("playerCard").scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
   } catch (err){
     bad("Couldn't run the mission: " + (err instanceof TypeError ? NO_SERVER : err.message) + ".");
@@ -1072,7 +1095,7 @@ $("addCmp").onclick = () => { if (sel && !compare.includes(sel) && compare.lengt
 function drawCompare(){
   const t = $("cmp");
   if (!compare.length){ t.innerHTML = `<tr><td style="color:var(--muted);white-space:normal">No sites yet. Open a site in the planner and choose Add to comparison.</td></tr>`; return; }
-  $("cmpLead").textContent = `Up to four sites, all at the ${selMast} m height picked in the planner. Tap a site's name to play its mission beside it.`;
+  $("cmpLead").textContent = `Up to four sites, all at the ${selMast} m height picked in the planner. Tap a site's name to play its mission in the player above.`;
   const col = s => mastEntry(s, selMast);
   const onBest = f => s => col(s).headline_start ? f(col(s)) : "no safe date";
   const dates = e => (e.best_dates_within_100m && e.best_dates_within_100m.length ? e.best_dates_within_100m : e.best_dates.map(x => x.start));
@@ -1097,6 +1120,30 @@ function drawCompare(){
 /* ---------------- page chrome ---------------- */
 $("menuBtn").onclick = () => { const o = $("nav").classList.toggle("open"); $("menuBtn").setAttribute("aria-expanded", o); };
 document.querySelectorAll("#nav a").forEach(a => a.onclick = () => { $("nav").classList.remove("open"); $("menuBtn").setAttribute("aria-expanded", false); });
+
+// ---- tabs: the one long page split into Planner / The region / Your mission / Learn ---------------------------
+// Links such as #site=210&mast=10 keep working: they open the Planner tab with that site selected, and #tab=region
+// in a link opens a tab directly. Switching dispatches "resize" so canvases first laid out while hidden get their
+// real size from the existing resize listeners.
+const TABS = ["plan", "region", "mission", "learn"];
+function showTab(tab, goto){
+  if (!TABS.includes(tab)) tab = "plan";
+  document.querySelectorAll("[data-tabgroup]").forEach(el => el.classList.toggle("tab-on", el.dataset.tabgroup === tab));
+  document.querySelectorAll('#nav a[data-tab]').forEach(a => a.classList.toggle("on", a.dataset.tab === tab && !a.dataset.goto));
+  dispatchEvent(new Event("resize"));
+  const el = goto && document.getElementById(goto);
+  if (el) setTimeout(() => el.scrollIntoView({ behavior: calm() ? "auto" : "smooth" }), 180);   // after the redraw
+  else scrollTo(0, 0);
+}
+document.querySelectorAll("a[data-tab]").forEach(a => a.onclick = e => {
+  e.preventDefault();
+  $("nav").classList.remove("open"); $("menuBtn").setAttribute("aria-expanded", false);
+  showTab(a.dataset.tab, a.dataset.goto);
+});
+showTab(new URLSearchParams(location.hash.slice(1)).get("tab"));
+addEventListener("hashchange", () => {
+  if (location.hash.includes("tab=")) showTab(new URLSearchParams(location.hash.slice(1)).get("tab"));
+});
 $("simpleToggle").onchange = e => document.body.classList.toggle("simple", e.target.checked);
 $("motionToggle").checked = reduceMotion;
 $("motionToggle").onchange = e => { reduceMotion = e.target.checked; document.body.classList.toggle("calm", reduceMotion); document.documentElement.style.scrollBehavior = reduceMotion ? "auto" : ""; if (playing){ stop(); play(); } };
@@ -1251,14 +1298,14 @@ let mapPulse = 0;
     if (s.kind){   // a named site: replay it in the mission panel
       $("gInfo").innerHTML = `<b>${s.name}</b> · ${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}°` + (s.landed_utc ? `<br>Landed ${hourTxt(s.landed_utc)}` : "") +
         `<br><button class="btn small" id="gOpen">Replay this landing</button>`;
-      $("gOpen").onclick = () => { fillMission(s.id); $("mission").scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); };
+      $("gOpen").onclick = () => { showTab("mission"); fillMission(s.id); $("mission").scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); };
       return;
     }
     const e = mastEntry(s, selMast);
     $("gInfo").innerHTML = `<b>Site ${s.id}</b> · ${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}° · slope ${fmt(s.slope_deg, 1)}°<br>` +
       `${e.safe_landing_days} safe landing days at ${selMast} m · shortest safe height ${s.recommended_mast_m != null ? s.recommended_mast_m + " m" : "none"}<br>` +
       `<button class="btn small" id="gOpen">Open in planner</button>`;
-    $("gOpen").onclick = () => { select(s); $("planner").scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); };
+    $("gOpen").onclick = () => { showTab("plan"); select(s); $("planner").scrollIntoView({ behavior: calm() ? "auto" : "smooth" }); };
   }
   function loop(ts){
     const dt = Math.min(60, ts - lastT); lastT = ts;
