@@ -10,11 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#05080F; --bg2:#080C15; --panel:#0A0F19; --panel2:#0E1521; --line:#1D2534;
-  --ink:#ECEEF1; --muted:#98A1AF; --faint:#636D7E;
-  --accent:#D3D9E2; --accent-ink:#070B13; --accent-deep:#D3D9E2; --accent-fill:#121A28;
+  --bg:#010736; --bg2:#050D3C; --panel:#0D1C42; --panel2:#12224C; --line:#22396F;
+  --ink:#FAF5E6; --muted:#BAC0D6; --faint:#959DBC;
+  --accent:#FCF1D0; --accent-ink:#010736; --accent-deep:#FCF1D0; --accent-fill:#22396F;
   --sun:#F0A93E; --sun-soft:rgba(240,169,62,.16); --earth:#65B9E1; --earth-soft:rgba(101,185,225,.16);
-  --good:#5CC48A; --bad:#EE6A5E; --rock:#3A4250; --rock-line:#6B7586;
+  --good:#5CC48A; --bad:#EE6A5E; --rock:#2B3D70; --rock-line:#7F8CB4;
   --star:rgba(255,255,255,.55);
   color-scheme:dark;
 }
@@ -22,7 +22,7 @@
   :root:not([data-theme="dark"]){
     --bg:#EEF1F5; --bg2:#E4E8EE; --panel:#FFFFFF; --panel2:#F4F6F9; --line:#D3DAE4;
     --ink:#0E1522; --muted:#4F5B6E; --faint:#7A8597;
-    --accent:#1A2740; --accent-ink:#FFFFFF; --accent-deep:#1A2740; --accent-fill:#EDF0F5;
+    --accent:#22396F; --accent-ink:#FCF1D0; --accent-deep:#22396F; --accent-fill:#E6EAF3;
     --sun:#C27612; --sun-soft:rgba(194,118,18,.12); --earth:#2462C4; --earth-soft:rgba(36,98,196,.10);
     --good:#2E8A55; --bad:#C2453A; --rock:#BCC3CD; --rock-line:#8E97A5;
     --star:transparent;
@@ -296,6 +296,26 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted)}
 .drop.over{border-color:var(--accent)}
 .err{color:var(--bad)}
+/* ---- design system (Nov 14): radius / padding tokens; inner radius = outer radius - padding ---- */
+:root{--r-card:14px;--pad-card:16px;--r-inner:4px;--r-control:8px}
+.card{border-radius:var(--r-card);padding:var(--pad-card)}
+.tile,.fs-item,.whyrank,.howrank,#pano,.tablewrap,.dtebox,.pstick,.ginfo:not(.idle),.explain,.stat{border-radius:var(--r-inner)}
+.btn,select,input,textarea,.seg button,#masts button{border-radius:var(--r-control)}
+.card:hover,.stat:hover,.step:hover{box-shadow:none;transform:none;border-color:var(--line)}
+.moonwin{box-shadow:none}
+.btn.primary{padding:13px 22px;font-weight:650;font-size:1.02rem}
+.btn.primary:hover{background:color-mix(in srgb,var(--accent-deep) 88%,var(--bg))}
+.badge.real{background:none;border:0;padding:0;color:var(--muted);font-weight:500}
+h1,h2,h3,h4{text-wrap:balance}
+p,li,dd,figcaption{text-wrap:pretty}
+table,.tile .v,.clock,.rank,.fs-ladder,.stat .v,#psMain{font-variant-numeric:tabular-nums}
+#pano{height:340px;background:var(--bg2)}
+@media (max-width:640px){#pano{height:240px}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@keyframes picked{from{background:var(--accent-fill)}to{background:var(--panel)}}
+.card.picked{animation:picked .7s ease-out}
+@media (prefers-reduced-motion:reduce){.card.picked{animation:none}}
+body.calm .card.picked{animation:none}
 </style>
 </head>
 <body>
@@ -328,7 +348,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
           <button class="btn small" id="gLeft">Rotate left</button><button class="btn small" id="gRight">Rotate right</button>
           <button class="btn small" id="gIn">Zoom in</button><button class="btn small" id="gOut">Zoom out</button>
         </div>
-        <div class="ghint">Drag to turn the Moon; tap a marker for details</div>
+        
         <canvas id="globe" role="img" aria-label="A 3D Moon you can turn by dragging. Yellow markers are the best landing sites; the south pole shows NASA's real sunlight map."></canvas>
         <div class="ginfo idle" id="gInfo" aria-live="polite">Tap a yellow marker on the Moon to see that landing site.</div>
         <figcaption>The south pole is shaded with NASA's real long-term sunlight map.</figcaption>
@@ -382,7 +402,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
               <span><span class="dot" style="border:1.5px solid var(--accent)"></span>Flat, but no safe day at this height</span>
               <span><span class="dot" style="border:1.5px solid var(--muted)"></span>Too steep</span>
             </div>
-            <div class="explain">The background is NASA's map of how often each spot sees the Sun (or Earth), averaged over 18.6 years. Bright = often. Our tool goes further: it tells you about <em>your</em> mission dates.</div>
+            <div class="explain">The background is NASA's map of how often each spot sees the Sun (or Earth), averaged over 18.6 years. Bright = often. Our tool goes further: it tells you about your mission dates.</div>
           </div>
         </div>
 
@@ -435,7 +455,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <div class="dtebox" id="dteBox">
               <h4>Direct-to-Earth (DTE) windows during this mission</h4>
               <div class="tablewrap"><table class="fs-ladder" id="dteTable"></table></div>
-              <p class="hint" id="dteNote" style="margin:6px 0 0"></p>
+              <p class="hint" id="dteNote" style="margin:6px 0 0">Loading the mission…</p>
             </div>
             <div class="explain">Grey is the terrain the lander sees; point at it to see how far away the hill is that sets the horizon. The orange disc is the Sun and the blue disc is Earth, drawn at the hour you pick. When the Sun sinks behind the grey, the panels stop charging. When Earth sinks, the lander can't talk home.</div>
             <h3 style="margin-top:14px">Solar elevation</h3>
@@ -471,7 +491,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
   <section class="block" id="regionSec" data-tabgroup="region" style="padding-top:28px"><div class="wrap">
       <div class="card" id="regionCard">
         <h3>The whole region: is it only one crater?</h3>
-        <p class="hint" id="regionHint"></p>
+        <p class="hint" id="regionHint">Loading the results for all 2,436 candidate sites…</p>
         <div style="overflow-x:auto"><table class="fs-ladder" id="regionTable"></table></div>
         <p class="hint" style="margin-top:8px">The Planner tab shows the 400-site demo grid at the Shackleton rim. The same pipeline (same rules, the 100 m check with slopes) ran on all candidate sites within 6° of the pole, 5 km apart. Sites more than 5° from the pole are beyond our convergence study. Survival is at best (sun-tracking panels).</p>
       </div>
@@ -775,6 +795,8 @@ function buildRank(){
 
 /* ---------------- site ---------------- */
 function select(s){
+  const card = $("siteTitle").closest(".card");
+  if (card && sel !== s){ card.classList.remove("picked"); void card.offsetWidth; card.classList.add("picked"); }
   sel = s; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); renderRegion();
 }
 function setMast(m){ selMast = m; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); renderRegion(); }
