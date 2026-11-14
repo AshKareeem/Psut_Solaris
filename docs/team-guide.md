@@ -112,16 +112,19 @@ It works in four steps:
 - **100 m changes the answer.** On the Shackleton rim, a spot 2 m above the ground is almost always dark, while a crest 103 m away is lit about 86% of the time. We check every top site at 17 points within 100 m.
 - **Every answer explains itself.** For example: "#1 of 9. Ahead of #2 (site 131): safe landing days if the lander misses by up to 100 m: 46 vs 0." Or: "The Sun ... is 1.65 deg above the skyline (bearing 78 deg, set by the Moon's own curvature)."
 
-**The demo mission** (since Nov 13 night, after decision R3, option A):
-- **Where:** site 33 near the pole (89.926°S, 143.746°W, about 2.2 km from the pole), with panels and antenna 5 m above the ground.
-- **When:** landing on 16 November 2026 at 20:00 UTC.
+**The demo mission** (since Sat Nov 14, 04:00: the only candidate that passes every check, NASA Moon Trek's 5 m terrain included):
+- **Where:** site 210, the Shackleton rim site (89.779°S, 155.726°W), with panels and antenna 10 m above the ground.
+- **When:** landing on 21 January 2026 at 07:00 UTC.
 - **What:** a Nova-C-class lander, for a 14-day mission.
-- **At touchdown,** the Sun is 3.30° above the skyline and Earth 0.52°. Earth only just clears the 0.5° firm threshold, so say so.
+- **At touchdown,** the Sun is 2.98° above the skyline and Earth 0.56°.
 - **Over the mission,** the Sun and Earth are in view 100% of the time, there is no darkness, and the battery never dips.
-- **Across 2026–2030,** the site has 180 safe landing days. 46 of them stay safe if the lander misses by up to 100 m, and it is the **only** site at 5 m that survives a 100 m miss.
-- **Its ground:** 7.1° at the target; the steepest of its 17 points is 9.2°, so all are under the 10° gate.
-- **Rank:** #1 at 5 m and #2 at 10 m (behind site 210).
-- **At 2 m,** no site survives a 100 m miss (risk R3): the mast is not optional at the rim.
+- **Across 2026–2030,** the site has 337 safe landing days. 315 of them stay safe if the lander misses by up to 100 m.
+- **Its ground:** 3.9° at the target; the steepest of its 17 points is 6.4°.
+- **Rank:** #1 at 10 m. **At 0 and 2 m the same spot has no safe day at all.** That is the whole story of the mast.
+- **On NASA Moon Trek's 5 m terrain:** the same verdict (Sun 2.99°, Earth 0.57°; see README Part 9).
+- **Failsafe card:** it can land up to 176 h late and stay safe within 100 m, and even a landing one lunar month late is safe. All 17 points are safe, Earth is in view at touchdown, mid-mission and end, and it survives on half the battery (at best, sun-tracking panels).
+- **The second example, site 33 at 5 m:** the best 5 m site on our maps (180 safe days, 46 within 100 m). **On Moon Trek's 5 m terrain it fails**: a 7–8 m rise 20 m away hides the Sun and Earth. Use it to show that terrain finer than the map can change the answer (risk P4).
+- **At 2 m,** no site survives a 100 m miss (risk R3): at the rim the mast is not optional.
 
 ---
 
@@ -516,13 +519,19 @@ All from the 400-site demo grid, Nova-C-class lander, 14 days, unless stated oth
 - **At 2 m nothing survives a 100 m miss:** either a point is too steep, or the Sun or Earth is blocked at one of them. The finding: at the rim, a mast of about 5 m is a requirement, not an option.
 - **Site 210:** the highest rim pixel of the 240 m map. It is useless at 2 m and the best site at 10 m. The mast is a design decision, so the page ranks each height separately.
 
-**The demo mission** (site 33, 5 m, 2026-11-16 20:00 UTC, 14 days), from `web/data/sites/33_5.0.json`:
-- **At touchdown:** the Sun is 3.30° and Earth 0.52° above the skyline.
+**The demo mission** (site 210, 10 m, 2026-01-21 07:00 UTC, 14 days), from `web/data/sites/210_10.0.json`:
+- **At touchdown:** the Sun is 2.98° and Earth 0.56° above the skyline.
 - **Over 14 days:** the Sun and Earth are in view 100% of the time. There is no darkness, no Earth blackout, and the battery stays full.
-- **Closest the Sun comes to setting:** 1.65° above the skyline on 2026-11-29 19 UTC (bearing 78°, set by the Moon's own curvature).
-- **Closest Earth comes to setting:** 0.50° above the skyline on 2026-11-30 19 UTC (bearing 150°, the Moon's own curvature).
+- **Closest the Sun comes to setting:** 1.05° above the skyline on 2026-02-01 23 UTC (bearing 160°, set by the Moon's own curvature).
+- **Closest Earth comes to setting:** 0.53° above the skyline on 2026-02-04 06 UTC (bearing 161°).
 - **Neither sets** during the mission.
-- **Not yet re-checked on Moon Trek's 5 m terrain:** that check was done for the old demo site 190 (same verdict). Re-run Part 9 of the README for site 33 before quoting it.
+- **NASA Moon Trek's 5 m terrain gives the same verdict** (`out/analyze/site210_10m_5m.json`).
+
+**Site 33 at 5 m on Moon Trek (Nov 14):** it passes on our 20 m map but fails on the 5 m map, at 5 m and at 10 m.
+- **What the 5 m map shows:** a 7–8 m rise only 20–25 m away (bearings 104° and 137°) hides the Sun and Earth at touchdown. The 20 m map shows about 1 m there.
+- **How far apart the two maps are:** within 2 km, the 5 m map (averaged to 20 m) differs from the 20 m map by a median of 4.2 m (95th percentile 28 m). At site 190 the gap was 1.2–2.2 m.
+- **What we can't tell:** whether the rise is real or an artifact of the older 5 m product.
+- **The honest line:** "finer terrain can change the answer, which is why we check it, and why the demo is a site that passes on both."
 
 **Lander presets:**
 - **28 days:** no site at 0, 2 or 5 m has a safe date. At 10 m only site 210 does (427 days; 420 within 100 m).
@@ -549,6 +558,7 @@ All from the 400-site demo grid, Nova-C-class lander, 14 days, unless stated oth
 | **Compare sites** | sites side by side for the same height, using each one's headline landing |
 | **Play the mission** | the horizon seen from the lander, the Sun and Earth moving hour by hour, countdowns to sunset and Earthset, and a timeline of sunlight, Earth contact and battery on one shared playhead |
 | **Solar elevation** | the Sun's height against the terrain in its direction: the power margin |
+| **Failsafe card** (to build, Sat morning; data ready) | what if the landing slips 1 h, 6 h, 24 h or a lunar month; which of the 17 points within 100 m fail and why; Earth-contact plan (touchdown, mid-mission, end); each dark spell against the battery; half the battery; how many minutes a 0.02° skyline error moves sunset and Earthset; what the tool cannot see. Fields: `risk`, `contact_plan`, `dark_verdict`, `weak_battery`, `words`, `confidence` in `docs/ui-data-contract.md` (`risk` only for ranked sites) |
 | **Plan your own mission** | any coordinates, hour, length, mast, battery, panel, load and Earth margin; runs the real engine through `serve.py` (local server only) |
 | **How it works** | Skyline → Sun and Earth → Power and contact → Decision |
 | **Why it's hard** | the Sun, a day, shadows, Earth in the sky: the Moon vs Earth |
@@ -584,7 +594,7 @@ Risk review of Fri Nov 13, evening. The numbers are from the rebuilt data (`out/
 | R2 | **The slope gate used a placeholder slope.** The demo grid's slope came from two pixels of the 240 m map, a 480 m baseline, not NASA's 100 m. Five ranked sites passed at 5.5–9.7° but are 10.8–13.9° over 100 m on the 20 m map: 52, 230, 330, 380, 381. The page labelled them "over 100 m", which was not true. | **FIXED** | `make_demo_sites.py` now requires `--slope-dem` and computes the slope over 100 m on the finest map with `height_and_slope()`, the same function the named sites use. The placeholder `slope_deg()` is deleted. Site positions are identical, so the skylines are unchanged. Sites under 10°: 56 → 53. The gate now drops 52, 230, 330, 380 and 381, and admits 170 (9.98°) and 209 (9.23°), which the placeholder had wrongly rejected (10.4° and 12.6°). **Site 170 is now #1 at 2 m (37 days within 100 m vs 190's 18)**, so the 2 m pitch line changed (see R3). |
 | R3 | **The 100 m check did not check slope.** The 17 points inherit the parent's slope. On the 20 m map, only sites 33 and 210 keep all 17 points under 10°. **The new #1 at 2 m, site 170, is 9.98° at its centre (0.02° under the gate) and has 12 of 17 points at or above 10° (worst 13.8°); site 209 (#3) has 12.** The demo site 190 has 2 (worst 11.7°); site 72 has 1. | **FIXED (option A)** | Option A (strict, NASA's 100 m reading): a date is safe within 100 m only if all 17 points are also under 10°. Then no site at 2 m is safe within 100 m, and at 5 m only site 33 is (46 days). Option B (as now): the gate is the slope over 100 m at the target, and the 17 points check light and Earth. Say B plainly: "the 100 m check is for lighting and Earth; slope is gated at the target". Either way, show the worst slope within 100 m on the page. **Decided Nov 13 night: option A, built.** Each of the 17 points carries its own slope over 100 m on the 20 m map (`make_neighbours.py --slope-dem`); one point at 10° or more makes every date unsafe within 100 m. `results.json` adds `slope_max_within_100m_deg` and `steep_points_within_100m` per site. Result: no 2 m site survives a 100 m miss; site 33 is #1 at 5 m and the new demo. |
 | R4 | **The third ranking metric barely decides anything.** Battery needed is taken at the worst safe landing, which by definition barely survives, so nearly every ranked site needs 540–560 Wh of the 560 Wh usable. Measured: it decides **0 of the 68** rank sentences across the three presets. | **SAY IT** | "It's a tie-breaker; at their worst safe landing almost every site needs nearly the whole battery." A more telling metric (battery used at the headline landing) would change the ranking's meaning, so it is Ash's call and not for the night before judging. |
-| R5 | **The demo's lead is narrow.** Site 33's #1 at 5 m rests on 46 days within 100 m against 0, out of 1,813, and its touchdown Earth clearance is 0.52°. We never tested how terrain height error (metres, Barker et al. 2021) moves it. | **SAY IT** | "The geometry is validated; terrain error is the main uncertainty, which is why we check 100 m and confirmed the demo on Moon Trek's 5 m terrain." Future work: perturb the terrain by its stated error and re-rank. |
+| R5 | **Leads can be narrow.** At 5 m, site 33's #1 rests on 46 days within 100 m against 0, out of 1,813, and it fails on Moon Trek's 5 m terrain. The demo site 210 at 10 m leads by 315 to 139 and passes on Moon Trek. We never tested how terrain height error (metres, Barker et al. 2021) moves it. | **SAY IT** | "The geometry is validated; terrain error is the main uncertainty, which is why we check 100 m and re-checked the demo on Moon Trek's 5 m terrain." Future work: perturb the terrain by its stated error and re-rank. |
 | R6 | **17 points, not the whole circle.** A bad pocket between them would be missed. | **SAY IT** | 8 directions at 50 m and 100 m; denser rings are a parameter of `make_neighbours.py` if time allows. |
 | R7 | **The slope depends on the map.** Site 190: 8.2° on the 20 m map, 6.8° on Moon Trek's 5 m map. A site near 10° can flip between maps. | **SAY IT** | The gate uses the finest map that covers the whole grid (20 m). The 5 m map covers only a window at the demo site. |
 | R8 | **"Best" means best in the demo grid**: 400 sites about 9 km across. | **SAY IT** | "Demo grid" on every slide. The full ~2,436-site grid is the next run (about 5 minutes estimated). |
@@ -597,7 +607,7 @@ Risk review of Fri Nov 13, evening. The numbers are from the rebuilt data (`out/
 | P1 | **The battery assumes sun-tracking panels.** Our own IM-1 replay blames Odysseus's death on fixed, tipped panels while the Sun was still ~5° up. The load (50 W) is an estimate, the reserve (20%) an assumption, and there is no heater load in the dark. | **SAY IT** | "Our survival verdict is an upper bound for sun-tracking panels. The product and our IM-1 write-up both say so. Fixed-panel geometry is next." `sensitivity.py` shows how answers move with battery size (re-run it before quoting). |
 | P2 | **"Earth for half the mission" is our threshold.** NASA asks for direct-with-Earth contact with no relay, not a share. | **SAY IT** | "It's a mission requirement we chose and state (`min_dte_share` 0.5, in `results.json`)." It is a parameter (`--min-dte-share`) like the presets. |
 | P3 | **"Earth in view" is not a working link.** Any part of the disc counts (NASA's visibility rule). No antenna gain, pointing or data rate. | **SAY IT** | The weak-antenna preset needs 2° of clearance. A link budget is future work. |
-| P4 | **Terrain finer than 20 m is invisible.** IM-2's ~20 m crater is about one pixel. Beyond ~81.9°S only the 240 m map exists, and it can turn a dark spot lit (rim site: lit at 240 m, dark at 20 m). | **SAY IT** | That is why we check 100 m around every site and used Moon Trek's 5 m terrain at the demo site. Every report names the maps it used. **The tool did not predict IM-2.** |
+| P4 | **Terrain finer than 20 m is invisible.** IM-2's ~20 m crater is about one pixel. Beyond ~81.9°S only the 240 m map exists, and it can turn a dark spot lit (rim site: lit at 240 m, dark at 20 m). **Seen again on Nov 14:** site 33 passes on 20 m and fails on Moon Trek's 5 m map. | **SAY IT** | That is why we check 100 m around every site, re-check the demo on Moon Trek's 5 m terrain, and chose a demo (site 210) that passes on both. Every report names the maps it used. **The tool did not predict IM-2.** |
 | P5 | **Hourly sampling.** Touchdown is judged at the hour, so a 0.05° margin can change within the hour. | **FIXED in effect** | R1's firm touchdown keeps headline landings at least 0.5° clear, far more than an hour of motion changes. Events are interpolated to the minute. |
 | P6 | **The Sun's visible fraction is linear across the disc**, not area-weighted. | **SAY IT** (minor) | The 50% rule (the centre of the disc) is exact. Only partial-Sun power near sunrise and sunset is slightly off. Bilinear terrain also shaves crests by up to 0.017° (ring-crater test). |
 | P7 | **2 m is a best fit to NASA's PGDA map.** PGDA also uses LOLA terrain. | **SAY IT** | "It checks the method. The independent checks are JPL Horizons and Skyfield for the sky, and real landers." |
@@ -643,13 +653,14 @@ Its risks and the fix for each:
 | Why do you count Earth if only part of it shows? | CE 2 | "That's NASA's rule in its PGDA maps. The weak-antenna preset needs 2° of clearance instead." |
 | What makes a landing safe? | CE 3 | "Power and Earth at touchdown, Earth for half the mission, and the battery never below the reserve, checked from every landing hour." |
 | Why no weighted score? | CE 3 | "Weights are opinions. We rank by counts anyone can check: safe days within 100 m, safe days on the point, battery needed." |
+| Why a 10 m mast for the demo? | CE 3 | "It's a design requirement our tool found: the same rim spot has zero safe days at 2 m and 315 within 100 m at 10 m, and it passes on NASA's 5 m terrain too." |
 | Why is site 131 below 33 at 5 m with more safe days? | CE 3 | "229 days on its exact point, but 6 of the 17 spots within 100 m are steeper than 10°, so a 100 m miss isn't safe. Site 33 keeps 46 days." |
 | Why does no 2 m site survive a 100 m miss? | CE 3 | "At the rim either a nearby spot is too steep or a crest blocks the Sun or Earth from 2 m. A 5 m mast clears it: that's a design requirement our tool found." |
 | Did your rankings change during the event? Why? | CE 3 / IoT | "Yes, and that's the point of checking. Our risk review found the demo grid's slope came from the 240 m map, not over 100 m as NASA defines it. On the 20 m map five sites were too steep, so we fixed the gate in Step 0 and re-ran. It's in the git log." |
 | Where do 700 Wh come from? | IoT | "25 Ah × 28 V, Nova-C-class; 200 W panels from Nova-C's specs; the 50 W load is an estimate from Odysseus's battery life. All labelled." |
 | How do you get the slope? | IoT | "Over a 100 m baseline from the finest map at the site, NASA's Artemis gate: under 10°. IM-1 reads 12.2° vs NASA's ~12°." |
 | Can I use it without installing anything? | BIT | "Yes: the page, or the one-file offline build. Only hand-set missions need the laptop server." |
-| What does the user see first? | BIT | walk through the demo: Your lander → 5 m → Best sites → site 33 → Play the mission |
+| What does the user see first? | BIT | walk through the demo: Your lander → 10 m → Best sites → site 210 → Play the mission → its failsafe card |
 | Which NASA data? | Business | "Horizons, Moon Trek and Quickmap from the Resources tab, plus LOLA, SPICE and PGDA." |
 | Who benefits? | Business | "CLPS planners picking a site and a landing window; educators showing why the pole is hard; the public." |
 | What does it cost to run? | Business | "Nothing: static files. The full grid is minutes on a laptop." |
