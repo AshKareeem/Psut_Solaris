@@ -9,7 +9,7 @@
 | 0:00–0:40 | Business | **The problem.** Near the Moon's south pole the Sun never rises more than about 1.5° above the horizon, and Earth hangs low in one direction. A hill 10 km away decides whether a lander has power. IM-1 tipped over and lasted about a week; IM-2 landed on its side in shadow and ended within 13 hours. Planners need to know **where and when** a landing gets sunlight and a link home. | slide 2 |
 | 0:40–3:30 | BIT drives, Ash narrates | **Live demo** (open `index.html#site=210&mast=10`): (1) "Your lander": Nova-C class, 14 days. (2) **Height 10 m → Best sites → site 210, the Shackleton rim.** Read "Why #1": 315 safe days even if we miss by 100 m. (3) Switch to **2 m**: the same spot has zero safe days. "A landing site is a point in time *and* a height." (4) **Play the mission**: the real horizon, the Sun circling, Earth low, the countdowns, the battery. (5) **Failsafe card**: it can land up to 176 h late, all 17 points within 100 m are safe, Earth is in view at landing, mid-mission and end, and it survives on half the battery, at best. | the page |
 | 3:30–5:00 | Ash, then CE 2 | **How it works.** Ash: "For each of 1,440 directions we walk the terrain out to 250 km and take the highest angle, curvature included." CE 2: "NASA SPICE gives the Sun and Earth every hour from 2026 to 2030, in LOLA's own Moon frame." | slide 4 |
-| 5:00–6:15 | CE 3, then IoT | **Evidence.** CE 3: "Every landing hour is tested against NASA's Artemis rules, and we rank by counts, not weights." IoT: "The battery is a Nova-C-class model with sources; survival is an upper bound." Then the numbers: **0.0003° against NASA JPL Horizons, r = 0.92 against NASA's sunlight map, 151 tests, confirmed on NASA Moon Trek 5 m.** | slide 5 |
+| 5:00–6:15 | CE 3, then IoT | **Evidence.** CE 3: "Every landing hour is tested against NASA's Artemis rules, and we rank by counts, not weights." IoT: "The battery is a Nova-C-class model with sources; survival is an upper bound." Then the numbers: **0.0003° against NASA JPL Horizons, r = 0.92 against NASA's sunlight map, 151 tests, and the demo passes on NASA Moon Trek's 5 m terrain too.** | slide 5 |
 | 6:15–7:00 | Business | **Honest limits, AI use, impact, next.** "Built before and during the event (git tag); written with AI, verified by tests and NASA checks. It costs nothing to run. Next: fixed-panel geometry, newer 5 m terrain, traverse planning." | slides 6–7 |
 
 **If a judge asks "is it only one crater?":**
@@ -68,7 +68,7 @@ A full battery bridges 11.2 hours of darkness."
 
 **60 seconds:** "Every number comes from NASA data:
 - the LOLA terrain and SPICE ephemerides;
-- the three Resources-tab tools: JPL Horizons, which checks every Sun and Earth position; Moon Trek, whose 5 m terrain confirmed the demo site; and Quickmap, one click from every site;
+- the three Resources-tab tools: JPL Horizons, which checks every Sun and Earth position; Moon Trek, whose 5 m terrain the demo site passes too (and another site fails: finer terrain matters); and Quickmap, one click from every site;
 - NASA's own PGDA sunlight maps, which we match with correlation 0.92.
 
 Users: CLPS mission planners choosing a site and a landing window; educators showing why the pole is hard; the public. It runs at zero cost, is open source, and is reproducible from published NASA files with checksums."

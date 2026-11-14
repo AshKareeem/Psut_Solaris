@@ -47,7 +47,7 @@ It has been run on all 2,436 candidate sites within 6° of the pole (116 have a 
 - **The settings were chosen by a convergence study:** every site's skyline is within 0.02° of the finest settings in 99% of its directions.
 - **NASA JPL Horizons:** 124 Sun and Earth positions, all within 0.0003°.
 - **NASA's PGDA sunlight maps:** correlation 0.92 at 100 pixels around Shackleton (2 m best-fit height).
-- **NASA Moon Trek's 5 m terrain:** it confirms our demo site, and it showed us where finer terrain changes the answer.
+- **NASA Moon Trek's 5 m terrain:** the demo site passes on it too, and another site that passes on our 20 m map fails on it, which showed us where finer terrain changes the answer.
 - **Our limits are stated in the product:** the battery assumes sun-tracking panels, so survival is an upper bound.
 
 **Benefits.**
@@ -75,12 +75,12 @@ It has been run on all 2,436 candidate sites within 6° of the pole (116 have a 
 | # | Slide | The number on it | Source |
 |---|---|---|---|
 | 1 | **Title:** LunarWindow, team Psut_Solaris, `[NAMES]`, the challenge name; one screenshot of the mission player | — | — |
-| 2 | **Problem:** south-pole landers live or die by a Sun and Earth just above the horizon. IM-1 tipped over and lasted about a week; IM-2 landed on its side in shadow and ended in under 13 hours. | Sun within ±1.5° of the horizon | CLAUDE.md §2 |
+| 2 | **Problem:** south-pole landers live or die by a Sun and Earth just above the horizon. IM-1 tipped over and lasted about a week; IM-2 landed on its side in shadow and ended in under 13 hours. | Sun within ±1.5° of the horizon | `docs/team-guide.md` Part 3.1 |
 | 3 | **What a user does:** pick lander → height → site → landing hour; see the horizon, Sun and Earth, countdowns, verdict and why | demo: site 210 at 10 m, landing 2026-01-21 07:00 UTC; Sun 2.98° and Earth 0.56° above the skyline | `web/data/sites/210_10.0.json` |
 | 4 | **How it works + NASA data:** LOLA → horizon (1,440 directions, 250 km); SPICE → Sun and Earth; battery → survival; 100 m and slope checks. Resources tab: Horizons, Moon Trek, Quickmap | ~3.5 ms per site | team guide 4.2 |
 | 5 | **Evidence (Validity):** Horizons, PGDA, Moon Trek, tests, convergence | 0.0003° · r = 0.92 · 151 tests · 0.02° | README Parts 7–9 |
 | 6 | **Findings:** a landing site is a point in time. The rim site is dark at 2 m and the best site at 10 m. No 2 m site survives a 100 m miss. Site 33 passes on our 20 m map but fails on NASA's 5 m map: finer terrain changes the answer (the IM-2 lesson). | 0.3% vs 85.9% (rim vs crest 103 m away) · 337 safe days, 315 within 100 m (site 210 at 10 m) · **the whole region: 2,436 sites within 6°, 116 with a safe day at 2 m, at least 49 safe after a 100 m miss** | `tests/test_real_terrain.py`, `web/data/results.json`, `docs/region-results.md` |
-| 7 | **Timeline, AI use, sustainability, next:** before and during the event (tag `pre-event-2026-11-12`); AI verified by tests and NASA checks; zero running cost. Next: fixed-panel geometry, the full 6° grid, newer 5 m terrain, traverse planning once a rover model exists. | 19+ event commits | `git log pre-event-2026-11-12..` |
+| 7 | **Timeline, AI use, sustainability, next:** before and during the event (tag `pre-event-2026-11-12`); AI verified by tests and NASA checks; zero running cost. Next: fixed-panel geometry, newer 5 m terrain across the region, traverse planning once a rover model exists. | 45 event commits | `git log pre-event-2026-11-12..` |
 
 **Labels the deck must carry:** "400-site demo grid near Shackleton" on slides 3 and 6. "Survival is an upper bound (sun-tracking panels)" wherever survival is shown.
 

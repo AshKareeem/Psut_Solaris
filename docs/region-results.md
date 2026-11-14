@@ -55,10 +55,11 @@ Run on Sat Nov 14 with `scripts/run_region.py`: IoT's grid of 2436 sites, 5 km a
 ## What this adds, and what it doesn't
 
 - **The demo grid isn't the whole story.** Around the Shackleton rim no site survives a 100 m miss at 2 m. Region-wide, at least 49 sites do. The best, **site 422** (87.047°S, 24.187°W, ground 2.7°, steepest within 100 m 5.8°), keeps 77 safe landing days at 2 m, 149 at 5 m and 162 at 10 m.
+- **Played live through "Plan your own mission"** (`scripts/analyze.py`, 2 m, landing 2027-11-05 06:00 UTC, 14 days): safe. At touchdown the Sun is 2.16° and Earth 0.54° above the skyline, both stay in view the whole mission, and it survives on half the battery (at best). Saved as `out/analyze/site422_2m.json`.
 - **Checked against NASA PGDA at site 422** (the 3×3 NASA 60 m pixels around it; an 18.6-year average, observer height unstated):
   - Earth in view: ours 55.8% at 2 m, NASA 54–55%;
   - sunlight: ours 48% at 2 m, NASA 31–47% across the 9 pixels and 46.6% on the site's own pixel.
-  - Our window is 2026–2030, so a few points of difference are expected.
+  - Our window is 2026–2030, so a few points of difference are expected. Our Sun share is slightly above NASA's 9-pixel range, so say "within a few points", not "matches".
 - **Limits:**
   - Sites more than 5° from the pole are beyond our convergence study (300 km test rays leave the 240 m map there); great-circle rays keep the 99% error small there, but unverified.
   - NASA Moon Trek's 5 m map covers only 87.5–90°S, so site 422 (87.05°S) can't get the 5 m check our demo site had.
