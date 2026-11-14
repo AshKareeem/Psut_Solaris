@@ -9,12 +9,13 @@
   web/data/profiles/<id>/     the same two for every other lander preset (scripts/profiles.py)
   web/data/profiles.json      the presets: id, label, description, results (path of its results.json), default
   web/data/named_sites.json   named_sites.csv (presets for the mission panel)
+  web/data/region.json        the whole region (scripts/run_region.py): counts and the best sites per mast
 
 Sources (download once into data/moon/): https://svs.gsfc.nasa.gov/4720
   lroc_color_poles_4k.tif, ldem_4.tif
 
 Usage:
-  python scripts/build_web.py --profiles out/profiles        (scripts/run_profiles.py output)
+  python scripts/build_web.py --profiles out/profiles_failsafe --region out/region/region_summary.json
 """
 import argparse
 import csv
@@ -98,9 +99,21 @@ def named_sites(src, dst):
     return len(rows)
 
 
+def region(src, dst, top=8):
+    """scripts/run_region.py's summary, cut to the counts and the best `top` sites per mast, for the page."""
+    r = json.loads(Path(src).read_text())
+    keep = {k: r[k] for k in ("sites", "pass_gates", "sites_with_a_safe_day", "span", "ranking_keys")}
+    keep["best_by_mast"] = {m: lst[:top] for m, lst in r["ranked_by_mast"].items()}
+    keep["checked_100m_by_mast"] = {m: sum(1 for s in lst if (s["safe_days_within_100m"] or 0) > 0)
+                                    for m, lst in r["ranked_by_mast"].items()}
+    dst.write_text(json.dumps(keep, indent=1))
+    return r["sites"]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--profiles", required=True, help="scripts/run_profiles.py output: one folder per preset")
+    ap.add_argument("--region", required=True, help="scripts/run_region.py region_summary.json")
     ap.add_argument("--moon", default=str(ROOT / "data/moon"), help="folder with the two CGI Moon Kit files")
     ap.add_argument("--web", default=str(ROOT / "web"))
     a = ap.parse_args()
@@ -111,8 +124,9 @@ def main():
     moon_relief(moon / "ldem_4.tif", web / "assets/moon_relief.png")
     n = copy_profiles(Path(a.profiles), web / "data")
     k = named_sites(ROOT / "named_sites.csv", web / "data/named_sites.json")
+    nr = region(a.region, web / "data/region.json")
     print(f"web/assets: moon_color.jpg, moon_relief.png; web/data: {n} lander presets (profiles.json), "
-          f"{k} named sites")
+          f"{k} named sites, the region ({nr} sites)")
 
 
 if __name__ == "__main__":

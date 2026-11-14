@@ -139,7 +139,20 @@ Drawing the skyline view: plot `horizon_deg` against `theta_deg`, then the Sun t
 
 ## The app's folder (`web/`)
 
-`scripts/build_web.py --profiles <run_profiles --out>` copies every lander preset's `results.json` and the detail files it names into `web/data/`, `named_sites.csv` into `web/data/named_sites.json`, and builds the Moon textures in `web/assets/`. The page fails loudly if a file is missing; it never shows stand-in data.
+`scripts/build_web.py --profiles <run_profiles --region out/region/region_summary.json --out>` copies every lander preset's `results.json` and the detail files it names into `web/data/`, `named_sites.csv` into `web/data/named_sites.json`, and builds the Moon textures in `web/assets/`. The page fails loudly if a file is missing; it never shows stand-in data.
+
+### The whole region: `web/data/region.json`
+
+From `scripts/run_region.py` (all candidate sites within 6°, default lander), cut by `build_web.py`:
+
+```
+sites, pass_gates                 how many candidate sites, how many pass the gates
+sites_with_a_safe_day {mast: n}   sites with at least one safe landing day at that height
+checked_100m_by_mast {mast: n}    sites with a day safe within 100 m (a floor: each tile's top 20 were checked)
+best_by_mast {mast: [{id, lat, lon, x_m, y_m, slope_deg, slope_max_within_100m_deg, safe_days_within_100m,
+                      safe_landing_days, battery_needed_Wh, headline_start}, ...]}   the best 8, in the ranking's order
+span, ranking_keys                as in results.json
+```
 
 ### Lander presets ("Your lander"): `web/data/profiles.json`
 

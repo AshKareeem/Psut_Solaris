@@ -460,7 +460,7 @@ How much the answers depend on the two weakest inputs (demo grid, 14 days, any l
 
 ### 4.8 Building the web data
 
-- **`scripts/build_web.py --profiles out/profiles_r3`** copies each preset's `results.json` and the mission files it names into `web/data/`. It also writes `profiles.json` and `named_sites.json`, and builds the Moon textures in `web/assets/`.
+- **`scripts/build_web.py --profiles out/profiles_r3`** --region out/region/region_summary.json copies each preset's `results.json` and the mission files it names into `web/data/`. It also writes `profiles.json` and `named_sites.json`, and builds the Moon textures in `web/assets/`.
   - It checks the version and the preset of every file.
   - **Never hand-edit `web/data/`.**
 - **`scripts/build_standalone.py`** packs the whole page into one file (`web_standalone/lunarwindow_standalone.html`, about 13 MB) that opens by double-click, with no server. Hand-set missions still need `serve.py`.
@@ -772,7 +772,7 @@ python scripts/analyze.py --lat -89.79293 --lon -153.9246 --mast 2 --start 2028-
 ```
 python scripts/make_demo_sites.py data/ldem_75s_240m.lbl --slope-dem data/ldem_80s_20m.lbl --out out/sites/sites.csv
 python scripts/run_profiles.py --horizon out/pipe/horizon --sky out/pipe6/sky.npz --sites out/sites/sites.csv --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --out out/profiles_r3
-python scripts/build_web.py --profiles out/profiles_r3
+python scripts/build_web.py --profiles out/profiles_r3 --region out/region/region_summary.json
 python scripts/build_standalone.py        # optional: the one-file offline page
 ```
 

@@ -5,7 +5,7 @@
   3. scripts/run_horizon.py on those points (20 m terrain near them)             -> <out>/nb/
   4. scripts/score_sites.py --neighbours for each preset                         -> <out>/<id>/
 Each final results.json gets meta.profile {id, label, description, args}. Then:
-  python scripts/build_web.py --profiles <out>
+  python scripts/build_web.py --profiles <out> --region out/region/region_summary.json
 
 Usage:
   python scripts/run_profiles.py --horizon out/pipe/horizon --sky out/pipe6/sky.npz --sites out/demo/sites.csv \
@@ -56,7 +56,7 @@ def main():
     for pid, p in PROFILES.items():
         run("score_sites.py", *base, *p["args"], "--neighbours", nb, "--out", out / pid)
         tag(out / pid / "results.json", pid)
-    print(f"\n{len(PROFILES)} presets -> {out}; next: python scripts/build_web.py --profiles {out}")
+    print(f"\n{len(PROFILES)} presets -> {out}; next: python scripts/build_web.py --profiles {out}") --region out/region/region_summary.json
 
 
 if __name__ == "__main__":

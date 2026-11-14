@@ -435,6 +435,13 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         </div>
       </div>
 
+      <div class="card" id="regionCard">
+        <h3>The whole region: is it only one crater?</h3>
+        <p class="hint" id="regionHint"></p>
+        <div style="overflow-x:auto"><table class="fs-ladder" id="regionTable"></table></div>
+        <p class="hint" style="margin-top:8px">The planner above shows the 400-site demo grid at the Shackleton rim. The same pipeline (same rules, the 100 m check with slopes) ran on all candidate sites within 6° of the pole, 5 km apart. Sites more than 5° from the pole are beyond our convergence study. Survival is at best (sun-tracking panels).</p>
+      </div>
+
       <div class="card mission" id="mission">
         <h3>Plan your own mission</h3>
         <p class="hint">Set every parameter by hand: where, when, how high, and the lander's power. The team's Python pipeline runs it in a few seconds (horizon engine on NASA LOLA terrain, NASA SPICE for the Sun and Earth, the battery model) and the result plays above. It needs the local server: <code>python scripts/serve.py</code>.</p>
@@ -544,7 +551,17 @@ for (const k in BASEMAPS){ const im = new Image(); im.src = BASEMAPS[k].src; im.
 /* ---------------- loading ----------------
    One path: results.json (scripts/score_sites.py, version 4) and sites/<id>.json (scripts/site_report.py, version 1),
    served from the same folder as this page. The page computes no physics: it only indexes and draws these files. */
-const DATA_ROOT = "data/", PROFILES_FILE = DATA_ROOT + "profiles.json", NAMED = DATA_ROOT + "named_sites.json";
+const DATA_ROOT = "data/", PROFILES_FILE = DATA_ROOT + "profiles.json", NAMED = DATA_ROOT + "named_sites.json", REGION_FILE = DATA_ROOT + "region.json";
+let REGION = null;   // scripts/run_region.py via build_web.py: the whole region, default lander
+function renderRegion(){   // the best sites region-wide at the selected height, as the pipeline ranked them
+  if (!REGION || selMast == null) return;
+  const m = mk(selMast), best = REGION.best_by_mast[m] || [];
+  $("regionHint").textContent = `All ${REGION.sites.toLocaleString()} candidate sites within 6° of the pole, Nova-C-class lander, 14 days, landings in ${REGION.span.first_start.slice(0, 4)}–${REGION.span.last_start.slice(0, 4)}. ` +
+    `At ${selMast} m, ${REGION.sites_with_a_safe_day[m]} sites have a safe landing day, and at least ${REGION.checked_100m_by_mast[m]} stay safe if the lander misses by 100 m.`;
+  $("regionTable").innerHTML = `<tr><th>#</th><th>Site</th><th>Where</th><th>Safe days within 100 m</th><th>On the point</th><th>Steepest within 100 m</th><th></th></tr>` +
+    best.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.id)}</td><td>${fmt(-s.lat, 2)}°S, ${fmt(Math.abs(s.lon), 2)}°${s.lon < 0 ? "W" : "E"}</td><td>${s.safe_days_within_100m ?? "–"}</td><td>${s.safe_landing_days}</td><td>${fmt(s.slope_max_within_100m_deg, 1)}°</td>` +
+      `<td><a href="${quickmapUrl(s.x_m, s.y_m)}" target="_blank" rel="noopener">Quickmap ↗</a></td></tr>`).join("");
+}
 let PROFILES = [], PROFILE = null, DATA_BASE = DATA_ROOT, loadToken = 0;   // DATA_BASE = the folder of the loaded preset's results.json
 function start(d, keep){
   if (!d.meta || d.meta.version !== 4 || !Array.isArray(d.sites))
@@ -725,9 +742,9 @@ function buildRank(){
 
 /* ---------------- site ---------------- */
 function select(s){
-  sel = s; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail();
+  sel = s; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); renderRegion();
 }
-function setMast(m){ selMast = m; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); }
+function setMast(m){ selMast = m; custom = null; stop(); cursor = 0; renderSite(); buildRank(); drawMap(); drawCompare(); showDetail(); renderRegion(); }
 function renderSite(){
   const s = sel, e = mastEntry(s, selMast);
   $("siteTitle").textContent = "Site " + s.id;
@@ -1400,9 +1417,9 @@ $("landerSel").onchange = e => {
   const p = PROFILES.find(x => x.id === e.target.value); if (!p || p === PROFILE) return;
   loadProfile(p, { sel: sel ? String(sel.id) : null, mast: selMast, compare: compare.map(s => String(s.id)) });
 };
-Promise.all([getJSON(PROFILES_FILE), getJSON(NAMED)]).then(([profiles, named]) => {
+Promise.all([getJSON(PROFILES_FILE), getJSON(NAMED), getJSON(REGION_FILE)]).then(([profiles, named, region]) => {
   if (!Array.isArray(profiles) || !profiles.length) throw new Error(`${PROFILES_FILE} has no lander presets`);
-  PROFILES = profiles; NAMED_SITES = named;
+  PROFILES = profiles; NAMED_SITES = named; REGION = region;
   $("landerSel").innerHTML = profiles.map(p => `<option value="${p.id}">${p.label}</option>`).join("");
   return loadProfile(profiles.find(p => p.default) || profiles[0]);     // the default (listed first)
 })

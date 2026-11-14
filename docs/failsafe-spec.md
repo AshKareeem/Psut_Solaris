@@ -60,7 +60,7 @@ The future-work line: *"Per-point skyline + SPICE sky is the core of a traverse 
 - **Real examples to read:** `web/data/sites/33_5.0.json` (the demo mission file) and `web/data/results.json` show the current schema with real numbers.
 - **The rebuild happens after review, on Ash's laptop (Claude runs it):**
   - `python scripts/run_profiles.py --horizon out/pipe/horizon --sky out/pipe6/sky.npz --sites out/sites/sites.csv --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --out out/profiles_failsafe` (about 15 minutes);
-  - then `python scripts/build_web.py --profiles out/profiles_failsafe`.
+  - then `python scripts/build_web.py --profiles out/profiles_failsafe`. --region out/region/region_summary.json
 
 ## 3. The blocks, in commit order
 

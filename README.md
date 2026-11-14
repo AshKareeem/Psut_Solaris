@@ -55,7 +55,7 @@ It runs the engine and SPICE for that one site and writes the same report as `si
 Every mission file now also carries the failsafe blocks — `risk` (launch delays and a 100 m miss; ranked sites only), `contact_plan`, `dark_verdict`, `weak_battery` and `confidence` — see `docs/ui-data-contract.md`.
 
 ```
-python scripts/build_web.py --profiles out/run/profiles   # Moon textures + every preset's results into web/
+python scripts/build_web.py --profiles out/run/profiles --region out/region/region_summary.json   # Moon textures + every preset's results into web/
 python scripts/serve.py                                     # http://127.0.0.1:8765/
 ```
 

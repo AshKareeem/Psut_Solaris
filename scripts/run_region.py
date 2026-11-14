@@ -70,7 +70,7 @@ def summary(results_files):
             for sid in ids:
                 s, e = by_id[sid], by_id[sid]["masts"][mast]
                 out.setdefault(mast, []).append({
-                    "id": sid, "lat": s["lat"], "lon": s["lon"], "slope_deg": s["slope_deg"],
+                    "id": sid, "lat": s["lat"], "lon": s["lon"], "x_m": s["x_m"], "y_m": s["y_m"], "slope_deg": s["slope_deg"],
                     "slope_max_within_100m_deg": s["slope_max_within_100m_deg"],
                     "safe_days_within_100m": e["safe_days_within_100m"], "safe_landing_days": e["safe_landing_days"],
                     "battery_needed_Wh": e["battery_needed_Wh"], "headline_start": e["headline_start"]})
@@ -122,7 +122,9 @@ def main():
     ranked, metas = summary(done)
     n_sites = sum(len(json.loads(Path(f).read_text())["sites"]) for f in done)
     n_gates = sum(sum(s["passes_gates"] for s in json.loads(Path(f).read_text())["sites"]) for f in done)
-    res = {"sites": n_sites, "pass_gates": n_gates, "tiles": [str(f) for f in done], "span": metas[0]["span"],
+    safe_any = {m: sum(e["safe_landing_days"] > 0 for f in done for s in json.loads(Path(f).read_text())["sites"]
+                       for mm, e in s["masts"].items() if mm == m) for m in ranked}
+    res = {"sites": n_sites, "pass_gates": n_gates, "sites_with_a_safe_day": safe_any, "tiles": [str(f) for f in done], "span": metas[0]["span"],
            "lander": metas[0]["lander"], "ranking_keys": metas[0]["ranking_keys"], "ranked_by_mast": ranked}
     (out / "region_summary.json").write_text(json.dumps(res, indent=1))
     print(f"{n_sites} sites in {len(done)} tiles, {n_gates} pass the gates -> {out / 'region_summary.json'}")

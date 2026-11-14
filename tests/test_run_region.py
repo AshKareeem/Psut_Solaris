@@ -13,7 +13,7 @@ def test_tiles_put_every_site_in_exactly_one_tile():
 
 def test_summary_orders_sites_from_all_tiles_by_the_ranking_keys(tmp_path):
     def site(i, within, point, need):
-        return {"id": i, "lat": -89.0, "lon": 0.0, "slope_deg": 3.0, "slope_max_within_100m_deg": 5.0,
+        return {"id": i, "lat": -89.0, "lon": 0.0, "x_m": 0.0, "y_m": 30000.0, "slope_deg": 3.0, "slope_max_within_100m_deg": 5.0,
                 "masts": {"5.0": {"safe_days_within_100m": within, "safe_landing_days": point,
                                   "battery_needed_Wh": need, "headline_start": "2026-01-01T00"}}}
     files = []
