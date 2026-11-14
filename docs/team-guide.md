@@ -418,9 +418,18 @@ Each preset is a set of **mission requirements, never weights**. Each one is a c
 | **Long mission: 28 days** | `--days 28` | long-duration science that must outlast a lunar night: heat-flow probes, seismometers (Blue Ghost carried LISTER) |
 | **Weak antenna** | `--earth-margin 2` | communication-heavy payloads with a low or blocked antenna: a radio beacon, a surface network (IM-2 carried a Nokia 4G/LTE network) |
 
-#### Sensitivity (`scripts/sensitivity.py`)
+#### Sensitivity (`scripts/sensitivity.py`, re-run Nov 14 on the current demo data)
 
-Safe days for a battery 1×, 2× and 4× bigger, and how much an antenna mask costs. Its output was made before the "any landing hour" change, so **re-run it before quoting any number from it.**
+How much the answers depend on the two weakest inputs (demo grid, 14 days, any landing hour; the 140 Wh reserve stays fixed):
+
+| Battery | Hours it bridges with no Sun | Sites with a safe date at 0 / 2 / 5 / 10 m |
+|---|---|---|
+| 700 Wh (our Nova-C-class lander) | 11.2 h | 31 / 43 / 54 / 61 |
+| 1,400 Wh | 22.4 h | 52 / 64 / 73 / 79 |
+| 2,800 Wh | 44.8 h | 98 / 116 / 130 / 136 |
+
+- **Antenna mask:** needing Earth 2° above the skyline cuts Earth-in-view time at the median site and mast from 42% to 32%.
+- **The answer for judges:** "Double the battery and 50% more sites have a safe date at 2 m; the ranking method doesn't change, only the lander's numbers. That's why the lander is an input."
 
 ### 4.6 One site in full: events, verdict, why (CE 3)
 
