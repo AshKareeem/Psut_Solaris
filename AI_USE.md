@@ -11,7 +11,7 @@ NASA Space Apps permits AI tools but asks teams to say where and how they were u
 | **Claude** (chat) | Helped write the chapter-by-chapter explanation of the horizon engine (`docs/horizon-engine/`). Each chapter was checked against the code. | Oct 2026 |
 | **Gemini** (Google) | Made the team's explainer videos from our own documents and figures (linked in the README). They are study material for the team, not part of the product. Any clip shown in the pitch carries a visible AI label. | Oct–Nov 2026 |
 
-The web page's front end was designed by our BIT teammate, with AI-assisted fixes merged during review.
+The web page's front end was designed by our BIT teammate. AI-assisted fixes were merged during review, and Claude Code added the failsafe card overnight on Nov 14.
 
 **Not AI-generated:**
 - **The data:** every number comes from NASA data (LOLA terrain, SPICE ephemerides, Moon Trek, PGDA) run through our code.

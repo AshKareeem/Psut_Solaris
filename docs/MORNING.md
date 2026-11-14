@@ -40,17 +40,12 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
 
 1. `git pull` first. Overnight edits touched only 4 lines of `web/index.html`: two test counters (149), the Moon Trek trust card, and the AI line in the footer.
 2. **The demo path to build around:** Your lander → **10 m** → Best sites → **site 210** → Play the mission → the failsafe card.
-3. **Build the failsafe card** from `docs/ui-data-contract.md`, section "Failsafe blocks":
-   - show `risk.words`, then `words`, then `confidence.checks` and `confidence.cannot_see`;
-   - show the `risk` card only when the key exists (missions from "Plan your own mission" have no `risk`).
-4. **Show the new per-site fields:**
-   - `slope_max_within_100m_deg` ("steepest ground within 100 m: 6.4°");
-   - `steep_points_within_100m`.
-5. **Glossary, one line each, next to where the term appears:**
-   - *skyline* = the horizon the lander sees;
-   - *mast* = how high the panels and antenna sit;
-   - *safe landing day* = a day with at least one hour where landing gives power, Earth contact, and a battery that lasts;
-   - *within 100 m* = safe even if the lander misses its target by 100 m, on ground under 10°.
+3. **Already built overnight (commit `749ea06`); polish it if you like, don't rebuild it:**
+   - **the failsafe card** under the mission player: late landing, the 17-point ring, the Earth plan, dark spells, half battery, how sure we are;
+   - **the steepest ground within 100 m** in the site line;
+   - **a "What these words mean" glossary;**
+   - **a direct demo link,** `index.html#site=210&mast=10`, for the deck or a QR code.
+4. **Backup recording of the demo path:** `docs/media/lunarwindow_demo_site210_10m.gif`. It carries an AI tool watermark.
 
 ## Stale outside the repo (fix or don't use)
 
