@@ -196,6 +196,21 @@ canvas{display:block;width:100%}
 .howrank ol{margin:4px 0 0 18px;padding:0}
 .howrank strong{color:var(--ink)}
 .story{margin:6px 0 14px;padding-left:20px;max-width:80ch;color:var(--ink)}
+.failsafe{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.failsafe h3{margin:0 0 4px}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px}
+.fs-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.fs-item h4{margin:0 0 6px;font-size:.95rem}
+.fs-item p{margin:0 0 6px;font-size:.92rem}
+.fs-item ul{margin:4px 0 0 18px;padding:0;font-size:.88rem;color:var(--muted)}
+.fs-ok{color:var(--good);font-weight:600}.fs-bad{color:var(--bad);font-weight:600}
+.fs-ladder{width:100%;border-collapse:collapse;font-size:.86rem;margin-top:6px}
+.fs-ladder td,.fs-ladder th{text-align:left;padding:3px 6px;border-bottom:1px solid var(--line)}
+.fs-dots{display:block;margin:6px auto 2px}
+.glossary{margin:8px 0 12px;font-size:.88rem;color:var(--muted)}
+.glossary summary{cursor:pointer;color:var(--accent)}
+.glossary dl{margin:6px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:3px 12px}
+.glossary dt{color:var(--ink);font-weight:600}.glossary dd{margin:0}
 .story li{margin:4px 0}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
 .tile{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
@@ -362,6 +377,13 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <div class="whyrank" id="whyRank" aria-live="polite"></div>
             <div class="tiles" id="tiles"></div>
             <p class="hint" id="tilesNote"></p>
+            <details class="glossary"><summary>What these words mean</summary><dl>
+              <dt>Skyline</dt><dd>the horizon the lander sees: how high the hills rise in every direction</dd>
+              <dt>Height (mast)</dt><dd>how high the solar panels and antenna sit above the ground</dd>
+              <dt>Safe landing day</dt><dd>a day with at least one landing hour that gives power and Earth contact at touchdown, Earth in view for half the mission, and a battery that never runs below its reserve</dd>
+              <dt>Within 100 m</dt><dd>still safe if the lander misses its target by up to 100 m (NASA's landing accuracy), checked at 17 points, each on ground under 10°</dd>
+              <dt>Earth contact</dt><dd>direct radio to Earth, with no relay satellite: Earth must be above the skyline</dd>
+            </dl></details>
             <p class="hint" id="safeDef"></p>
             <div class="explain">Raising the solar panels and antenna lifts them above nearby hills. At the pole the Sun skims the horizon, so a few metres can turn a dark spot into a sunny one.</div>
           </div>
@@ -403,6 +425,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
             <h3 style="margin-top:14px">Solar elevation</h3>
             <p class="hint">The Sun's height (orange) against the terrain in its direction (grey). The gap between them is your power margin.</p>
             <canvas id="elev" aria-label="Sun height against the terrain over the mission"></canvas>
+            <section class="failsafe" id="failsafe" aria-live="polite">
+              <h3>Failsafe: what if it goes wrong?</h3>
+              <p class="hint">Before you commit to this landing: a late landing, a missed target, a weaker battery, and how sure we are. Every line comes from the same pipeline as the verdict above; survival is at best (sun-tracking panels).</p>
+              <div class="fs-grid" id="fsGrid"></div>
+            </section>
           </div>
           <p class="note" id="playerNote" hidden></p>
         </div>
@@ -534,7 +561,10 @@ function start(d, keep){
   fitMap(); if (window.__globeRefresh) window.__globeRefresh();
   // keep the site the user was viewing only if it has a safe landing for this lander; else open the new list's best
   const kept = keep && BYID.get(keep.sel), keepIt = kept && mastEntry(kept, selMast).safe_landing_days > 0;
-  select(keepIt ? kept : topSites()[0] || kept || SITES[0]);
+  // a link such as index.html#site=210&mast=10 opens that site at that height (for the pitch and the deck)
+  const hp = new URLSearchParams(location.hash.slice(1)), hs = !keep && BYID.get(hp.get("site") || "");
+  if (hs && masts().includes(Number(hp.get("mast")))){ selMast = Number(hp.get("mast")); select(hs); }
+  else select(keepIt ? kept : topSites()[0] || kept || SITES[0]);
   drawCompare();
   // the hand-set mission form follows the preset's own mission length and Earth margin
   $("mDays").value = d.meta.mission_days; $("mMargin").value = d.meta.earth_margin_deg;
@@ -701,7 +731,10 @@ function setMast(m){ selMast = m; custom = null; stop(); cursor = 0; renderSite(
 function renderSite(){
   const s = sel, e = mastEntry(s, selMast);
   $("siteTitle").textContent = "Site " + s.id;
-  $("siteWhere").textContent = `${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}° · slope ${fmt(s.slope_deg, 1)}°`;
+  const steep = s.steep_points_within_100m;
+  $("siteWhere").textContent = `${fmt(s.lat, 3)}°, ${fmt(s.lon, 2)}° · slope ${fmt(s.slope_deg, 1)}°` +
+    (s.slope_max_within_100m_deg == null ? "" : ` · steepest ground within 100 m ${fmt(s.slope_max_within_100m_deg, 1)}°` +
+      (steep ? ` (${steep} of ${s.landing_error_points} points at 10° or more)` : ""));
   $("qmLink").href = quickmapUrl(s.x_m, s.y_m);
   const mb = $("masts"); mb.innerHTML = "";
   masts().forEach(m => { const b = document.createElement("button"); b.setAttribute("aria-pressed", m === selMast);
@@ -764,13 +797,44 @@ function renderPlayerHead(){
     const st = custom.site, G = DATA.meta.gates;
     $("heightNote").textContent = `Your parameters at ${fmt(st.lat, 4)}°, ${fmt(st.lon, 3)}°: ground slope ${fmt(st.slope_deg, 1)}° over 100 m ` +
       `(${st.slope_deg < G.slope_max_deg ? "within" : "steeper than"} the ${G.slope_max_deg}° landing limit), terrain ${st.terrain.join(" + ")}. Pick a site from Best sites to go back.`;
-    listInto($("story"), d.verdict.concat(d.why)); return;
+    listInto($("story"), d.verdict.concat(d.why)); renderFailsafe(d); return;
   }
   const e = mastEntry(s, selMast);
   $("heightNote").textContent = e.headline_within_100m
     ? "The landing shown above: the best date that stays safe wherever the lander touches down within 100 m."
     : "The landing shown above: the best date on the exact point (no date here stays safe at every point within 100 m).";
   listInto($("story"), d.verdict.concat(d.why));
+  renderFailsafe(d);
+}
+function fsItem(title, html){ return `<div class="fs-item"><h4>${title}</h4>${html}</div>`; }
+function fsDots(miss){   // the 17 points within 100 m, map view (north of the site is not map up: the ring is drawn as the map has it)
+  const R = 46, c = 52, sc = R / 100;
+  const dots = miss.map(m => `<circle cx="${(c + m.dx_m * sc).toFixed(1)}" cy="${(c - m.dy_m * sc).toFixed(1)}" r="${m.dx_m || m.dy_m ? 4.5 : 6}" fill="${m.safe ? "var(--good)" : "var(--bad)"}"><title>${esc(m.point)}: ${m.safe ? "safe" : esc(m.fails)}</title></circle>`).join("");
+  return `<svg class="fs-dots" width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="The 17 landing points within 100 m: green safe, red not">` +
+    `<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="var(--line)"/><circle cx="${c}" cy="${c}" r="${R / 2}" fill="none" stroke="var(--line)" stroke-dasharray="3 3"/>${dots}</svg>`;
+}
+function renderFailsafe(d){   // the failsafe blocks of the mission file, shown as given (docs/ui-data-contract.md)
+  const el = $("fsGrid"); if (!el) return;
+  const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  const items = [];
+  const r = d.risk;
+  if (r){
+    const rows = r.delay_ladder.map(x => `<tr><td>+${x.slip_h} h${x.label ? " (one lunar month)" : ""}</td><td class="${x.safe ? "fs-ok" : "fs-bad"}">${x.safe ? "safe" : "not safe"}</td><td>${x.safe ? "" : x.next_safe_utc ? "next safe " + hourTxt(x.next_safe_utc) : "none before 2031"}</td></tr>`).join("");
+    items.push(fsItem("If the landing is late", `<p>${esc(r.words[0])}</p><table class="fs-ladder"><tr><th>Delay</th><th>Landing</th><th></th></tr>${rows}</table>`));
+    if (r.miss_table) items.push(fsItem("If the lander misses by up to 100 m", fsDots(r.miss_table) + `<p>${esc(r.words[1])}</p>`));
+  } else {
+    items.push(fsItem("Late landing and 100 m miss", "<p>Computed for the ranked sites only, from five years of landing hours and the 17 points within 100 m. A hand-set mission doesn't have them.</p>"));
+  }
+  const w = d.words || [];
+  const cp = d.contact_plan;
+  items.push(fsItem("Earth contact plan", `<p>${esc(w[0] || "")}</p>` + (cp.windows.length ? li(cp.windows.map(x => `${x.covers.join(", ")}: ` + (x.start == null && x.end == null ? "Earth in view the whole mission"
+    : `${x.start ? x.start.slice(0, 16).replace("T", " ") + " UTC" : "from landing"} to ${x.end ? x.end.slice(0, 16).replace("T", " ") + " UTC" : "the end of the mission"}`))) : "")));
+  items.push(fsItem("If the Sun goes down", `<p>${esc(w[1] || "")}</p>` + (d.dark_verdict.length ? li(d.dark_verdict.slice(0, 4).map(x => `${hourTxt(x.start)}: ${x.hours} h dark, battery ${Math.round(x.battery_start_Wh)} → ${Math.round(x.battery_lowest_Wh)} Wh, ${x.lasts ? "lasts" : "runs out"}`)) : "")));
+  const wb = d.weak_battery;
+  items.push(fsItem("If the battery is half as big", `<p>${esc(w[2] || "")}</p><p class="hint" style="margin:0">${esc(wb.label)} (${Math.round(wb.e_max_Wh)} Wh, reserve ${Math.round(wb.e_min_Wh)} Wh)</p>`));
+  const c = d.confidence, mins = v => v == null ? "doesn't happen in this mission" : `moves by up to ${fmt(v, 0)} min`;
+  items.push(fsItem("How sure are we", `<p>If our skyline is off by ${c.skyline_shift_deg}° (the bound from our convergence study): sunset ${mins(c.sunset_shift_min)}, Earthset ${mins(c.earthset_shift_min)}; the verdict ${c.verdict_changes ? "<span class='fs-bad'>changes</span>" : "<span class='fs-ok'>stays the same</span>"}.</p>` + li(c.checks) + `<p style="margin-top:8px"><b>What this tool can't see:</b></p>` + li(c.cannot_see)));
+  el.innerHTML = items.join("");
 }
 function countdown(wins, t){   // wins: sorted {start, end}; null = before/after the mission
   for (const w of wins){
