@@ -83,16 +83,14 @@ Users: CLPS mission planners choosing a site and a landing window; educators sho
 
 ## Public link for phones (Cloudflare quick tunnel; no account, no token)
 
-Two terminals on the laptop, kept open for the whole demo (the laptop must stay awake):
+One terminal on the laptop, in the project folder, kept open for the whole demo (the laptop must stay awake):
 
 ```
-# terminal 1, in the project folder
-.venv\Scripts\python scripts\serve.py
-# terminal 2
-C:\Users\user\tools\cloudflared.exe tunnel --no-autoupdate --url http://localhost:8765
+.venv\Scripts\python scripts\start_public.py
 ```
 
-- **Get the link:** terminal 2 prints a `https://….trycloudflare.com` address. Phones open it, or add `#site=210&mast=10` for the demo. Everything works there, "Plan your own mission" included (tested: a mission in about 3 s).
-- **The link changes** every time terminal 2 restarts. Make the QR code or slide link after starting it.
-- **Anyone with the link** can run missions on the laptop. Stop both terminals with Ctrl+C after the judging.
+- **What it does:** starts the server and the tunnel, writes the new tunnel address into `web/api.json`, and pushes it. About a minute later, **https://ashkareeem.github.io/Psut_Solaris/** runs "Plan your own mission" on the laptop behind the scenes. Visitors only see the github.io address (tested from a browser, Nov 14).
+- **The direct tunnel link** it prints also works on any phone (add `#site=210&mast=10`).
+- **When the laptop is off,** the GitHub site still works; only "Plan your own mission" says there's no mission server.
+- **Anyone using the site** can run missions on the laptop while it's on. Ctrl+C stops everything after judging.
 - **The program:** `cloudflared.exe` is version 2026.10.7 from Cloudflare's GitHub releases, SHA-256 checked. It sits outside the project, not in git.
