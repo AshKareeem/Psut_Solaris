@@ -5,6 +5,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LunarWindow · Where and when to land at the lunar south pole</title>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
@@ -59,6 +60,8 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px)}
 .bar{display:flex;align-items:center;gap:16px;max-width:1240px;margin:0 auto;padding:12px 20px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;text-decoration:none;color:var(--ink)}
+.taplink{display:inline-block;padding:9px 4px;margin:-9px -4px}
+.logo-img{width:34px;height:34px;display:block;flex:none}
 .logo-mark{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 70% 35%,var(--sun) 0 18%,transparent 19%),radial-gradient(circle at 50% 50%,var(--panel2) 0 62%,var(--line) 63% 66%,transparent 67%)}
 nav.links{display:flex;gap:4px;margin-left:auto}
 nav.links a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:6px}
@@ -323,7 +326,7 @@ body.calm .card.picked{animation:none}
 
 <header class="top">
   <div class="bar">
-    <a class="logo" href="#top"><span class="logo-mark" aria-hidden="true"></span>LunarWindow</a>
+    <a class="logo" href="#top"><img class="logo-img" src="assets/logo.svg" alt="" width="34" height="34">LunarWindow</a>
     <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false">☰</button>
     <nav class="links" id="nav">
       <a href="#tab=plan" data-tab="plan" class="on">Planner</a><a href="#tab=region" data-tab="region">The region</a><a href="#tab=mission" data-tab="mission">Your mission</a><a href="#tab=plan" data-tab="plan" data-goto="compare">Compare</a><a href="#tab=learn" data-tab="learn" data-goto="moon">Moon vs Earth</a><a href="#tab=learn" data-tab="learn" data-goto="trust">Why trust it</a><a href="#about">About</a>
@@ -575,6 +578,7 @@ body.calm .card.picked{animation:none}
     <div class="row"><strong style="color:var(--ink)">LunarWindow</strong> · Team Psut_Solaris · NASA Space Apps Challenge 2026</div>
     <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · NASA JPL Horizons (Sun and Earth check) · NASA Moon Trek (5 m LOLA terrain, LROC NAC images) · LROC QuickMap (site views) · NASA SVS CGI Moon Kit (globe) · Battery values from public Nova-C information.</div>
     <div>An independent student project, not affiliated with or endorsed by NASA.</div>
+    <div>Logo made with AI assistance (Claude).</div>
     <div class="row"><label class="toggle" style="margin:0"><input type="checkbox" id="motionToggle"> Reduce motion</label></div>
   </div>
 </footer>
@@ -612,7 +616,7 @@ function renderRegion(){   // the best sites region-wide at the selected height,
     `At ${selMast} m, ${REGION.sites_with_a_safe_day[m]} sites have a safe landing day, and at least ${REGION.checked_100m_by_mast[m]} stay safe if the lander misses by 100 m.`;
   $("regionTable").innerHTML = `<tr><th>#</th><th>Site</th><th>Where</th><th>Safe days within 100 m</th><th>On the point</th><th>Steepest within 100 m</th><th></th></tr>` +
     best.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.id)}</td><td>${fmt(-s.lat, 2)}°S, ${fmt(Math.abs(s.lon), 2)}°${s.lon < 0 ? "W" : "E"}</td><td>${s.safe_days_within_100m ?? "–"}</td><td>${s.safe_landing_days}</td><td>${fmt(s.slope_max_within_100m_deg, 1)}°</td>` +
-      `<td><a href="${quickmapUrl(s.x_m, s.y_m)}" target="_blank" rel="noopener">Quickmap ↗</a></td></tr>`).join("");
+      `<td><a class="taplink" href="${quickmapUrl(s.x_m, s.y_m)}" target="_blank" rel="noopener">Quickmap ↗</a></td></tr>`).join("");
 }
 let PROFILES = [], PROFILE = null, DATA_BASE = DATA_ROOT, loadToken = 0;   // DATA_BASE = the folder of the loaded preset's results.json
 function start(d, keep){
@@ -932,8 +936,8 @@ function renderFailsafe(d){   // the failsafe blocks of the mission file, shown 
   items.push(fsItem("If the battery is half as big", `<p>${esc(w[2] || "")}</p><p class="hint" style="margin:0">${esc(wb.label)} (${Math.round(wb.e_max_Wh)} Wh, reserve ${Math.round(wb.e_min_Wh)} Wh)</p>`));
   const c = d.confidence, mins = v => v == null ? "doesn't happen in this mission" : `moves by up to ${fmt(v, 0)} min`;
   const nc = d.nasa_check, chk = nc ? `<p style="margin-top:8px"><b>Check it yourself in NASA JPL Horizons</b> (landing ${hourTxt(nc.landing_utc)}): ` +
-    `<a href="${nc.horizons_sun_url}" target="_blank" rel="noopener">Sun ↗</a> (our elevation ${fmt(nc.our_sun_el_deg, 3)}°) · ` +
-    `<a href="${nc.horizons_earth_url}" target="_blank" rel="noopener">Earth ↗</a> (ours ${fmt(nc.our_earth_el_deg, 3)}°). ` +
+    `<a class="taplink" href="${nc.horizons_sun_url}" target="_blank" rel="noopener">Sun ↗</a> (our elevation ${fmt(nc.our_sun_el_deg, 3)}°) · ` +
+    `<a class="taplink" href="${nc.horizons_earth_url}" target="_blank" rel="noopener">Earth ↗</a> (ours ${fmt(nc.our_earth_el_deg, 3)}°). ` +
     `Horizons lists azimuth and elevation; compare the elevation. Elevation is from level, and at the rim the skyline itself can sit below level.</p>` : "";
   items.push(fsItem("How sure are we", chk + `<p>If our skyline is off by ${c.skyline_shift_deg}° (the bound from our convergence study): sunset ${mins(c.sunset_shift_min)}, Earthset ${mins(c.earthset_shift_min)}; the verdict ${c.verdict_changes ? "<span class='fs-bad'>changes</span>" : "<span class='fs-ok'>stays the same</span>"}.</p>` + li(c.checks) + `<p style="margin-top:8px"><b>What this tool can't see:</b></p>` + li(c.cannot_see)));
   el.innerHTML = items.join("");
