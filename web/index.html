@@ -303,7 +303,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       <div class="stat"><div class="v num">0.92</div><div class="k">Match with NASA's own sunlight map (correlation, 100 map pixels)</div></div>
       <div class="stat"><div class="v num">0.0003°</div><div class="k">Sun and Earth positions vs NASA JPL Horizons (124 checks)</div></div>
       <div class="stat"><div class="v num">1,440</div><div class="k">Directions in every site's skyline, out to 250 km</div></div>
-      <div class="stat"><div class="v num">140</div><div class="k">Automated tests passing</div></div>
+      <div class="stat"><div class="v num">149</div><div class="k">Automated tests passing</div></div>
     </div>
 
   </div>
@@ -474,9 +474,9 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       <div class="trust">
         <div class="card"><div class="big num">0.92</div><h3>Matches NASA's sunlight map</h3><p>Our skylines reproduce NASA's long-term sunlight map pixel by pixel around Shackleton's rim (correlation 0.92 at a 2 m height, average difference +0.1 points, 94% of pixels within 10 points).</p></div>
         <div class="card"><div class="big num">0.0003°</div><h3>Sun and Earth positions</h3><p>From NASA's SPICE toolkit, in the same Moon frame as the terrain maps. Checked against NASA JPL Horizons at 124 positions (six named sites, 2026–2030 and the IM-1 and IM-2 landing hours) and against a second library (Skyfield).</p></div>
-        <div class="card"><div class="big num">5 m</div><h3>Confirmed on NASA Moon Trek terrain</h3><p>Our demo site gives the same verdict on Moon Trek's 5 m LOLA map, four times finer than ours. On the way we found and removed a 210 m spike in that map that would have faked a 4-hour shadow.</p></div>
+        <div class="card"><div class="big num">5 m</div><h3>Confirmed on NASA Moon Trek terrain</h3><p>The Shackleton rim site (site 210, 10 m) gives the same verdict on Moon Trek's 5 m LOLA map, four times finer than ours. Near the pole (site 33) the two maps disagree, and the 5 m map shows a rise 20 m away that our 20 m map smooths out: terrain finer than the map can change the answer. We also found and removed a 210 m spike in that map that would have faked a 4-hour shadow.</p></div>
         <div class="card"><div class="big num">50/50</div><h3>Terrain and sky line up</h3><p>A fake Sun placed just behind a test hill comes out hidden, and just above it comes out visible, in all 50 joint tests.</p></div>
-        <div class="card"><div class="big num">140</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
+        <div class="card"><div class="big num">149</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
       </div>
       <p class="limits"><strong>Honest limits.</strong> Battery values follow public information about Intuitive Machines' Nova-C lander, with an estimated load, and assume panels that track the Sun, so survival is an upper bound for fixed panels. NASA doesn't publish the observer height of its map, so the 2 m match is a best fit. Every number on this page comes from the team's pipeline; the page computes nothing itself.</p>
     </div>
@@ -488,6 +488,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     <div class="row"><strong style="color:var(--ink)">LunarWindow</strong> · Team Psut_Solaris · NASA Space Apps Challenge 2026</div>
     <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · NASA JPL Horizons (Sun and Earth check) · NASA Moon Trek (5 m LOLA terrain, LROC NAC images) · LROC QuickMap (site views) · NASA SVS CGI Moon Kit (globe) · Battery values from public Nova-C information.</div>
     <div>An independent student project, not affiliated with or endorsed by NASA.</div>
+    <div>Use of AI: code written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 149 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Every data file says so in its metadata. <a href="https://github.com/AshKareeem/Psut_Solaris/blob/main/AI_USE.md">AI_USE.md</a></div>
     <div class="row"><label class="toggle" style="margin:0"><input type="checkbox" id="motionToggle"> Reduce motion</label></div>
   </div>
 </footer>

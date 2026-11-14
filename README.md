@@ -1,5 +1,7 @@
 # LunarWindow: Lunar Landing Site Navigator (NASA Space Apps 2026, team Psut_Solaris)
 
+**Use of AI:** the code was written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 149 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Where, how and how it was checked: [AI_USE.md](AI_USE.md).
+
 Challenge: [Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) (it was called "CLPS Lunar Mission Browser" until the full statement came out; the old link is dead).
 
 From candidate landing sites near the Moon's south pole to ranked sites with **safe landing dates** (power and Earth at touchdown, and the lander lives through the mission), sunrise/sunset and direct-to-Earth windows to the minute, the longest darkness and the energy to bridge it, landing-error robustness within 100 m and a mast recommendation, for the web app. Any coordinates and landing time get the same report from one call (`scripts/analyze.py`). The core is the horizon engine (Step 1), which computes each site's **skyline**: for every direction θ, the horizon elevation H(θ) and the distance to the terrain that blocks the sky.
@@ -60,7 +62,7 @@ python scripts/serve.py                                     # http://127.0.0.1:8
 - `web/index.html` is the whole app: a 3D Moon (NASA's LRO colour map, lit with LOLA slopes), a planner map over NASA's sunlight and Earth-visibility maps, one ranking per panel/antenna height, the site's numbers, the **mission player** (the horizon seen from the lander with the Sun and Earth, countdowns to sunset and Earthset, battery), and a side-by-side comparison.
 - **Plan your own mission:** set the location, landing hour, mission length, height, battery, panel power, load and Earth margin by hand, or start from a named site (`named_sites.csv`: IM-1 and IM-2 at their real landing hours, the Shackleton rim and crest, the ridge). `scripts/serve.py` runs it through `scripts/analyze.py` (the real engine, SPICE and battery model) in 1–3 s and the player shows the result.
 - The page computes no physics: it draws the pipeline's files. Without the server (e.g. a static host), everything but hand-set missions works from `web/data/`.
-- **Offline, no server:** `python scripts/build_standalone.py` packs `web/` (page, data, images) into one file, `web_standalone/lunarwindow_standalone.html` (about 7 MB), that opens by double-click. Re-run it after `build_web.py`. Hand-set missions still need `serve.py`.
+- **Offline, no server:** `python scripts/build_standalone.py` packs `web/` (page, data, images) into one file, `web_standalone/lunarwindow_standalone.html` (about 13 MB), that opens by double-click. Re-run it after `build_web.py`. Hand-set missions still need `serve.py`.
 - `build_web.py` needs NASA's CGI Moon Kit textures in `data/moon/`: `lroc_color_poles_4k.tif` and `ldem_4.tif` from <https://svs.gsfc.nasa.gov/4720>.
 
 **IM-1 replay** (`docs/im1-replay.md`): at Odysseus' real landing site and dates, the tool puts terrain sunset on 2 March 2024 at 14:17 UTC. The lander lost power on 29 February with the Sun still about 5° above the skyline, because it lay tipped with fixed panels facing the wrong way. Terrain didn't end that mission; attitude did.
@@ -122,16 +124,54 @@ tests/                 smooth Moon, cone, ring crater, map loading, direction co
                        touchdown rule and ranking, events to the minute, site report, real-terrain regressions
 ```
 
+## Data (NASA files, not in git): where to get them and their checksums
+
+Everything below goes into `data/` (about 2 GB). Check a download with `certutil -hashfile <file> SHA256` (Windows) or `sha256sum <file>`. These are the exact files every committed number was computed from.
+
+| File | Size (bytes) | Source |
+|---|---|---|
+| `ldem_75s_240m.img` / `.lbl` | 29,062,688 / 4,988 | [PDS LOLA polar GDR](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/) (`.img` in `img/`) |
+| `ldem_875s_20m.img` / `.lbl` | 115,034,112 / 4,986 | same folder |
+| `ldem_80s_20m.img` / `.lbl` | 1,848,320,000 / 4,993 | same folder |
+| `AVGVISIB_85S_060M_201608.TIF` | 33,994,464 | [NASA PGDA product 69](https://pgda.gsfc.nasa.gov/products/69) (Sun) |
+| `AVGVISIB_85S_060M_201608_EARTH.TIF` | 24,862,958 | same (Earth) |
+| `kernels/de421.bsp` | 16,790,528 | [NAIF](https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/de421.bsp) (`make_sky.py` downloads all four kernels) |
+| `kernels/moon_pa_de421_1900-2050.bpc` | 1,770,496 | [NAIF pck](https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/moon_pa_de421_1900-2050.bpc) |
+| `kernels/moon_080317.tf` | 21,437 | [NAIF fk](https://naif.jpl.nasa.gov/pub/naif/generic_kernels/fk/satellites/moon_080317.tf) |
+| `kernels/naif0012.tls` | 5,257 | [NAIF lsk](https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls) |
+| `moon/lroc_color_poles_4k.tif` | 13,095,388 | [NASA SVS CGI Moon Kit](https://svs.gsfc.nasa.gov/4720) (globe only) |
+| `moon/ldem_4.tif` | 4,153,352 | same |
+| `moontrek/site*_5m.tif` | | made by `scripts/moontrek.py` from [NASA Moon Trek](https://trek.nasa.gov/moon/) (Part 9); the raw download and the despike count are kept beside it |
+
+SHA-256 checksums:
+
+```
+d031efe2611b17dfbf3c158f5e15dc04cd5719349dcbf6384bb21fd97697c490  ldem_75s_240m.img
+aaf57ffef2df80ce32cfc490056cbdb900f9dd4f061e4c7a288c414271a5a75b  ldem_75s_240m.lbl
+dc16bba853b22fa29e26dc26b411acc180de70478578b2c75c8e6f253f56a9d9  ldem_875s_20m.img
+67fc425229c00cf1702aea1b407c4c32b98470d66fa101fe16950d872f870de4  ldem_875s_20m.lbl
+db44c3b2444acff1af528301c8a6988934b490249aceff0ac55668bdf3eab365  ldem_80s_20m.img
+0793611cde045e6f8eec1365b2500084522fdc6d515ec30b5ab2427de62a6624  ldem_80s_20m.lbl
+ccf67d4f39e0a970c111196da7d6551ffcf50d075470b93067fb3904c0b05806  AVGVISIB_85S_060M_201608.TIF
+d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2  AVGVISIB_85S_060M_201608_EARTH.TIF
+08b20db2ae22488650641c5a9033e5bfda4b1c4b440cfeaf20f621cfa18ecdb3  kernels/de421.bsp
+656f90616403d75a75f0cd6c8830fc5b44f8cb4facb5ccb8915e752b397520cf  kernels/moon_pa_de421_1900-2050.bpc
+78732477b96f9863e7b0d65bcee3c22b8707ca5ed0db56d1173319cb2e8c7993  kernels/moon_080317.tf
+678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b  kernels/naif0012.tls
+918649a7f8ed2f1329b2cd95bb0d25483befdcb60ae1a66db681a637cc21344f  moon/lroc_color_poles_4k.tif
+330afa2556a86fd05ac6ba2f912f246600fdade35de2a0d90593d50d07b01b65  moon/ldem_4.tif
+```
+
 ## Setup
 
 ```
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 133 passed
+python -m pytest -q                # expect: 149 passed
 ```
 
-Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (127 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
+Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (143 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
 
 ## Part 1: synthetic demo (no download needed)
 
@@ -307,6 +347,10 @@ python scripts/moontrek.py --lat -89.79293 --lon -153.9246 --half-km 9 --photo o
 - **Agreement with our map.** Around site 190, Moon Trek's 5 m heights (averaged over each 20 m pixel) differ from the PDS 20 m map by a median of 1.2 m on slopes under 5°, 2.2 m at 5–10° (where landers land) and 8 m on crater walls over 20°. That is the same LOLA data, gridded at two resolutions.
 - **Needles.** This older product contains spikes from bad laser returns. Around site 190, 10 pixels stand over 100 m above their neighbours. One is a 210 m needle, 30 m wide, 582 m from the site, that would on its own invent a 7° skyline and a 4-hour shadow. `moontrek.py` replaces every pixel more than 50 m from its neighbourhood median (0.12% of pixels there), keeps the raw download, and records the count in a sidecar file. A 30 m limit gives the same verdict.
 - **Result.** The demo mission (site 190, 2 m, landing 2028-09-02 00:00 UTC) gets the same verdict on Moon Trek's 5 m terrain as on our 20 m map: Sun up 100%, Earth in view 97%, the lander survives. The 5 m slope at the landing point is 6.8° (8.2° on the 20 m map).
+- **Re-check after the ranking changed (Nov 14).** After the slope fixes, site 33 at 5 m became the best 5 m site on our maps, and site 210 (the rim site) at 10 m the best overall. On Moon Trek's 5 m terrain:
+  - **Site 210 at 10 m, landing 2026-01-21 07 UTC: the same verdict.** The Sun is 2.99° and Earth 0.57° above the skyline, both are in view the whole mission, and the lander survives (`out/analyze/site210_10m_5m.json`).
+  - **Site 33 (89.926°S, about 2.2 km from the pole): the maps disagree, and the verdict flips.** On the 5 m map a rise of 7–8 m only 20–25 m away (bearings 104° and 137°) hides the Sun and Earth at touchdown, at 5 m and even at 10 m. The 20 m map shows about 1 m there. Over a 2 km box around the site the 5 m map (averaged to 20 m) differs from the 20 m map by a median of 4.2 m (95th percentile 28 m), against 1.2–2.2 m at site 190.
+  - Two LOLA products alone can't tell whether that rise is real or an artifact of the older 5 m product (Barker et al. 2021 describe the improved 5 m maps). Either way, it is the lesson IM-2 taught: **terrain finer than the map can change the answer, so the demo uses site 210, which passes on both.**
 - **Imagery.** `--photo` stitches Moon Trek's LROC Narrow Angle Camera south-pole mosaic around the site and circles the 100 m landing-error zone. The tile grid was checked against LOLA: Shackleton's shadowed interior is centred on LOLA's crater centre.
 
 ## References
