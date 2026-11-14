@@ -228,7 +228,7 @@ The ``any part of Earth'' rule matches the one NASA uses for its Earth-visibilit
 % ---------------------------------------------------------------------
 \section{Step 4: Safe Landing Dates and Ranking}
 
-\textbf{Gates.} A site must be within 6\textdegree{} of the pole and have a slope under 10\textdegree. Sites that fail are removed, not ranked.
+\textbf{Gates.} A site must be within 6\textdegree{} of the pole and have a slope under 10\textdegree{} \emph{over 100\,m}, measured on the 20\,m map. Sites that fail are removed, not ranked. (Until 13 November the demo grid's slope came from two pixels of the 240\,m map, a 480\,m baseline, which let five too-steep sites through; it was found in a risk review and fixed.)
 
 \textbf{No weighted score.} An earlier version added the metrics into one score with weights. It gave many ties and called dates ``best'' on which the lander died, so it was removed. Every number below is a physical quantity.
 
@@ -248,13 +248,15 @@ The lander survives if $E_t \ge E_{\min}$ at every hour. \emph{Battery needed} i
 \end{enumerate}
 A landing day is safe if any of its hours is. The headline number per site and mast is the count of \emph{safe landing days}.
 
-\textbf{Landing accuracy.} A lander cannot hit an exact pixel; NASA's reference is within 100\,m of the target~\cite{nasa-artemis}. So a date counts for a site only if it is safe at every one of 17 points within 100\,m of it (the site, 8 points at 50\,m and 8 at 100\,m). For example, the best grid site at a 2\,m mast has 79 safe landing days on its exact point but 18 within 100\,m.
+\textbf{Landing accuracy.} A lander cannot hit an exact pixel; NASA's reference is within 100\,m of the target~\cite{nasa-artemis}. So a date counts for a site only if it is safe at every one of 17 points within 100\,m of it (the site, 8 points at 50\,m and 8 at 100\,m). Each of the 17 points must also have ground under 10\textdegree{} over 100\,m, since the lander may come down on any of them. With this rule, no site of the demo grid at a 2\,m mast is safe within 100\,m; at 10\,m, the Shackleton rim site has 337 safe landing days and 315 of them hold within 100\,m.
 
 \textbf{Ranking.} One list per mast height: the most safe landing days within 100\,m first, then the most on the site's own point, then the least battery needed. Sites with none within 100\,m stay in the list, below the others.
 
 \textbf{Mast height.} Using the horizons from Step~1 at several mast heights, report the shortest mast with at least one safe landing date.
 
-\textbf{When to land.} Each site gets its best landing hours: the most hours of power and Earth together, then the shortest darkness.
+\textbf{When to land.} Each site gets its best landing hours: a \emph{firm} touchdown first (the Sun's centre and the top of Earth's disc both at least 0.5\textdegree{} above the skyline, so small terrain errors cannot hide them), then the most hours of power and Earth together, then the shortest darkness, then the earliest.
+
+\textbf{Failsafe.} For the chosen landing, the pipeline also reports what goes wrong if it does not go to plan: how many hours late it can land and stay safe (and a one-lunar-month delay), which of the 17 points fail and why, when Earth is in view to upload and confirm the plan, whether the battery lasts through each dark spell, the same mission with half the battery, and how many minutes sunset and Earthset move if the skyline is 0.02\textdegree{} off.
 
 % ---------------------------------------------------------------------
 \section{Step 5: Prove It Is Right}
@@ -276,6 +278,7 @@ A landing day is safe if any of its hours is. The headline number per site and m
   \end{itemize}
   NASA's maps use the same LOLA terrain, so this checks the method. Always compare at pixel centres, never ``NASA's value at the site'': a site can sit exactly on the corner of four NASA pixels (at our rim site they read 0\%, 6\%, 47\% and 56\%).
   \item \textbf{Check the sky against NASA JPL Horizons.} Horizons~\cite{horizons} (listed in the challenge's resources) gives the Sun and Earth seen from any point on the Moon. At six named sites, ten hours over 2026--2030 plus the IM-1 and IM-2 landing hours, all 124 positions agree with our Step~2 to within 0.0003\textdegree{} (the Sun's radius is 0.27\textdegree). An independent check with Skyfield agrees to 0.00032\textdegree.
+  \item \textbf{Check the terrain against NASA Moon Trek's 5\,m map.} At the demo site (the Shackleton rim site, 10\,m mast) the mission gets the same verdict on Moon Trek's 5\,m LOLA terrain as on our 20\,m map. At another site, 2\,km from the pole, the two maps differ (a median of 4\,m, and a 7--8\,m rise 20\,m from the site that only the 5\,m map shows), and the verdict flips: terrain finer than the map can change the answer, which is why the demo uses a site that passes on both.
 \end{enumerate}
 
 % ---------------------------------------------------------------------
