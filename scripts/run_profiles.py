@@ -56,7 +56,7 @@ def main():
     for pid, p in PROFILES.items():
         run("score_sites.py", *base, *p["args"], "--neighbours", nb, "--out", out / pid)
         tag(out / pid / "results.json", pid)
-    print(f"\n{len(PROFILES)} presets -> {out}; next: python scripts/build_web.py --profiles {out}") --region out/region/region_summary.json
+    print(f"\n{len(PROFILES)} presets -> {out}; next: python scripts/build_web.py --profiles {out} --region out/region/region_summary.json")
 
 
 if __name__ == "__main__":
