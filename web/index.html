@@ -1128,7 +1128,7 @@ function fillMission(key){
     $("mLat").value = n.lat; $("mLon").value = n.lon; $("mTerrain").value = n.lat > -81.5 ? "240m" : "20m";   // the 20 m map's reach
     if (n.landed_utc) setStart(n.landed_utc);
   }
-  if (!$("mDays").value){
+  if (!$("mEmax").value){   // the lander's numbers, once (start() sets the mission length and Earth margin first)
     $("mDays").value = DATA.meta.mission_days; $("mEmax").value = L.e_max_Wh; $("mEmin").value = L.e_min_Wh;
     $("mPanel").value = L.p_panel_W; $("mLoad").value = L.p_load_W; $("mMargin").value = DATA.meta.earth_margin_deg; $("mTerrain").value = "20m";
   }
