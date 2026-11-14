@@ -50,7 +50,8 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
    - **the steepest ground within 100 m** in the site line;
    - **a "What these words mean" glossary;**
    - **a direct demo link,** `index.html#site=210&mast=10`, for the deck or a QR code.
-4. **Backup recording of the demo path:** `docs/media/lunarwindow_demo_site210_10m.gif`. It carries an AI tool watermark.
+4. **"The whole region" card** (after the player): at the selected height, how many of the 2,436 sites have a safe day, and the best 8 with Quickmap links (`web/data/region.json`).
+5. **Backup recording of the demo path:** `docs/media/lunarwindow_demo_site210_10m.gif`. It carries an AI tool watermark.
 
 ## Stale outside the repo (fix or don't use)
 

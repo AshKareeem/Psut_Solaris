@@ -575,6 +575,7 @@ All from the 400-site demo grid, Nova-C-class lander, 14 days, unless stated oth
 | **Play the mission** | the horizon seen from the lander, the Sun and Earth moving hour by hour, countdowns to sunset and Earthset, and a timeline of sunlight, Earth contact and battery on one shared playhead |
 | **Solar elevation** | the Sun's height against the terrain in its direction: the power margin |
 | **Failsafe card** (built Nov 14; open `index.html#site=210&mast=10`) | what if the landing slips 1 h, 6 h, 24 h or a lunar month; which of the 17 points within 100 m fail and why; Earth-contact plan (touchdown, mid-mission, end); each dark spell against the battery; half the battery; how many minutes a 0.02° skyline error moves sunset and Earthset; what the tool cannot see. Fields: `risk`, `contact_plan`, `dark_verdict`, `weak_battery`, `words`, `confidence` in `docs/ui-data-contract.md` (`risk` only for ranked sites) |
+| **The whole region** | at the selected height, how many of the 2,436 candidate sites within 6° have a safe landing day and survive a 100 m miss; the best 8 with Quickmap links (`web/data/region.json`, `scripts/run_region.py`) |
 | **Plan your own mission** | any coordinates, hour, length, mast, battery, panel, load and Earth margin; runs the real engine through `serve.py` (local server only) |
 | **How it works** | Skyline → Sun and Earth → Power and contact → Decision |
 | **Why it's hard** | the Sun, a day, shadows, Earth in the sky: the Moon vs Earth |

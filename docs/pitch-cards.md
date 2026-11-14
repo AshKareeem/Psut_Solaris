@@ -12,6 +12,14 @@
 | 5:00–6:15 | CE 3, then IoT | **Evidence.** CE 3: "Every landing hour is tested against NASA's Artemis rules, and we rank by counts, not weights." IoT: "The battery is a Nova-C-class model with sources; survival is an upper bound." Then the numbers: **0.0003° against NASA JPL Horizons, r = 0.92 against NASA's sunlight map, 151 tests, confirmed on NASA Moon Trek 5 m.** | slide 5 |
 | 6:15–7:00 | Business | **Honest limits, AI use, impact, next.** "Built before and during the event (git tag); written with AI, verified by tests and NASA checks. It costs nothing to run. Next: fixed-panel geometry, newer 5 m terrain, traverse planning." | slides 6–7 |
 
+**If a judge asks "is it only one crater?":**
+1. Scroll to **"The whole region"** card: all 2,436 sites within 6°, the best at your height.
+2. Then, live in **Plan your own mission** (local server):
+   - latitude −87.04745, longitude −24.1866;
+   - 2 m height;
+   - landing 2027-11-05 06:00 UTC, 14 days.
+3. That's site 422, the best 2 m site region-wide. It plays as safe, with the Sun 2.16° and Earth 0.54° above the skyline at touchdown.
+
 **If the laptop dies:** the GIF in `docs/media/` shows the demo path, and every number is in the deck.
 
 ## Ash: the horizon engine (Step 1)
