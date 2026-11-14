@@ -77,7 +77,7 @@ What it asks for, and where we answer it:
 - **Pre-event work:**
   - The rules say teams use the 2-day event to complete projects, and judges may ask about work done before it.
   - We **disclose it openly**. The annotated git tag `pre-event-2026-11-12` marks the state before the event.
-  - Everything after the tag is event work: `git log --oneline pre-event-2026-11-12..HEAD` (19 commits on Nov 13; see 11.2).
+  - Everything after the tag is event work: `git log --oneline pre-event-2026-11-12..HEAD` (45 commits by Sat Nov 14 morning; see 11.2).
 
 ### The judging rubric (local)
 
@@ -726,7 +726,7 @@ Not in git (too big or private):
 - **Oct 12 – Nov 12, before the event:** the engine, the validation, the pipeline and the first web app.
   - Public on GitHub since Oct 26.
   - Tagged `pre-event-2026-11-12` (`a97aace`).
-- **Nov 13, at the event:** 19 commits after the tag:
+- **Nov 13–14, at the event:** 45 commits after the tag, including:
   - landing at any hour (R7);
   - battery needed from the simulation (R6);
   - lists and stale files (R8, R9);
