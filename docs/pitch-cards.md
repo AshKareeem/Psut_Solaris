@@ -80,3 +80,19 @@ A full battery bridges 11.2 hours of darkness."
 Users: CLPS mission planners choosing a site and a landing window; educators showing why the pole is hard; the public. It runs at zero cost, is open source, and is reproducible from published NASA files with checksums."
 
 - **The limit:** the demo ranks 400 sites in a 9 km square near Shackleton. The same pipeline ran on all 2,436 sites within 6°: 116 of them have a safe landing day at 2 m, and at least 49 stay safe after a 100 m miss. The best, site 422 (87.05°S), keeps 77 safe days at 2 m and 162 at 10 m, and its Earth view matches NASA's map (55.8% vs 54–55%). Details: `docs/region-results.md`.
+
+## Public link for phones (Cloudflare quick tunnel; no account, no token)
+
+Two terminals on the laptop, kept open for the whole demo (the laptop must stay awake):
+
+```
+# terminal 1, in the project folder
+.venv\Scripts\python scripts\serve.py
+# terminal 2
+C:\Users\user\tools\cloudflared.exe tunnel --no-autoupdate --url http://localhost:8765
+```
+
+- **Get the link:** terminal 2 prints a `https://….trycloudflare.com` address. Phones open it, or add `#site=210&mast=10` for the demo. Everything works there, "Plan your own mission" included (tested: a mission in about 3 s).
+- **The link changes** every time terminal 2 restarts. Make the QR code or slide link after starting it.
+- **Anyone with the link** can run missions on the laptop. Stop both terminals with Ctrl+C after the judging.
+- **The program:** `cloudflared.exe` is version 2026.10.7 from Cloudflare's GitHub releases, SHA-256 checked. It sits outside the project, not in git.

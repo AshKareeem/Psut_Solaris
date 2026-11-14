@@ -66,3 +66,19 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
 - **GitHub Pages: done.** Live at https://ashkareeem.github.io/Psut_Solaris/
 - **The deck (Business):** from the outline in `docs/submission-drafts.md` §7, numbers as given there.
 - **Submit:** "Submit for Judging" after the pitch; resubmitting is allowed until Sun 23:59.
+
+## Public link for phones (Cloudflare quick tunnel; no account, no token)
+
+Two terminals on the laptop, kept open for the whole demo (the laptop must stay awake):
+
+```
+# terminal 1, in the project folder
+.venv\Scripts\python scripts\serve.py
+# terminal 2
+C:\Users\user\tools\cloudflared.exe tunnel --no-autoupdate --url http://localhost:8765
+```
+
+- **Get the link:** terminal 2 prints a `https://….trycloudflare.com` address. Phones open it, or add `#site=210&mast=10` for the demo. Everything works there, "Plan your own mission" included (tested: a mission in about 3 s).
+- **The link changes** every time terminal 2 restarts. Make the QR code or slide link after starting it.
+- **Anyone with the link** can run missions on the laptop. Stop both terminals with Ctrl+C after the judging.
+- **The program:** `cloudflared.exe` is version 2026.10.7 from Cloudflare's GitHub releases, SHA-256 checked. It sits outside the project, not in git.
