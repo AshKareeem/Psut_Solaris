@@ -10,19 +10,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#010736; --bg2:#050D3C; --panel:#0D1C42; --panel2:#12224C; --line:#22396F;
-  --ink:#FAF5E6; --muted:#BAC0D6; --faint:#959DBC;
-  --accent:#FCF1D0; --accent-ink:#010736; --accent-deep:#FCF1D0; --accent-fill:#22396F;
+  --bg:#02041A; --bg2:#040720; --panel:#070C24; --panel2:#0A112D; --line:#111A3A;
+  --ink:#ECE8DD; --muted:#A8ADC0; --faint:#858BA3;
+  --accent:#F2E8C8; --accent-ink:#02041A; --accent-deep:#F2E8C8; --accent-fill:#121B3D;
   --sun:#F0A93E; --sun-soft:rgba(240,169,62,.16); --earth:#65B9E1; --earth-soft:rgba(101,185,225,.16);
-  --good:#5CC48A; --bad:#EE6A5E; --rock:#2B3D70; --rock-line:#7F8CB4;
-  --star:rgba(255,255,255,.55);
+  --good:#5CC48A; --bad:#EE6A5E; --rock:#18233F; --rock-line:#56617F;
+  --star:rgba(255,255,255,.38);
   color-scheme:dark;
 }
 @media (prefers-color-scheme:light){
   :root:not([data-theme="dark"]){
     --bg:#EEF1F5; --bg2:#E4E8EE; --panel:#FFFFFF; --panel2:#F4F6F9; --line:#D3DAE4;
     --ink:#0E1522; --muted:#4F5B6E; --faint:#7A8597;
-    --accent:#22396F; --accent-ink:#FCF1D0; --accent-deep:#22396F; --accent-fill:#E6EAF3;
+    --accent:#010736; --accent-ink:#FCF1D0; --accent-deep:#010736; --accent-fill:#E6EAF3;
     --sun:#C27612; --sun-soft:rgba(194,118,18,.12); --earth:#2462C4; --earth-soft:rgba(36,98,196,.10);
     --good:#2E8A55; --bad:#C2453A; --rock:#BCC3CD; --rock-line:#8E97A5;
     --star:transparent;
@@ -575,7 +575,6 @@ body.calm .card.picked{animation:none}
     <div class="row"><strong style="color:var(--ink)">LunarWindow</strong> · Team Psut_Solaris · NASA Space Apps Challenge 2026</div>
     <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · NASA JPL Horizons (Sun and Earth check) · NASA Moon Trek (5 m LOLA terrain, LROC NAC images) · LROC QuickMap (site views) · NASA SVS CGI Moon Kit (globe) · Battery values from public Nova-C information.</div>
     <div>An independent student project, not affiliated with or endorsed by NASA.</div>
-    <div>Use of AI: code written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 152 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Every data file says so in its metadata. <a href="https://github.com/AshKareeem/Psut_Solaris/blob/main/AI_USE.md">AI_USE.md</a></div>
     <div class="row"><label class="toggle" style="margin:0"><input type="checkbox" id="motionToggle"> Reduce motion</label></div>
   </div>
 </footer>

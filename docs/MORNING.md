@@ -18,7 +18,7 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
   - **Site 33 at 5 m fails there** (a 7–8 m rise 20 m away, which the 20 m map doesn't show). The maps disagree by a median of 4.2 m near the pole.
   - **Site 210 at 10 m passes on both maps:** 337 safe days, 315 within 100 m, all 17 points under 6.4°. So it is the demo.
   - Site 33 stays as the honest example: finer terrain can change the answer.
-- **Required AI-use statement:** `AI_USE.md`, plus a line in the README and in the page footer.
+- **Required AI-use statement:** `AI_USE.md`, plus a line in the README; every data file states it in its metadata. (The page footer line was removed by the team on Nov 14.)
 - **Stale claims fixed:**
   - the page's "140 tests" is now 152;
   - the Moon Trek trust card now names site 210 and site 33;
