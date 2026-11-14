@@ -355,7 +355,7 @@ body.calm .card.picked{animation:none}
       </figure>
     </section>
     <figure class="skyband" data-tabgroup="plan">
-      <canvas id="skyCanvas" role="img" aria-label="The real skyline around the demo landing site at the Shackleton rim, with the Sun's path over the 14-day mission and Earth at landing"></canvas>
+      <canvas id="skyCanvas" role="img" aria-label="The real skyline around the demo landing site at the Shackleton rim, with the Sun and Earth moving through the 14-day mission"></canvas>
       <figcaption id="skyCap">Loading the demo site's horizon…</figcaption>
     </figure>
     <div class="stats">
@@ -1494,45 +1494,63 @@ $("landerSel").onchange = e => {
   const p = PROFILES.find(x => x.id === e.target.value); if (!p || p === PROFILE) return;
   loadProfile(p, { sel: sel ? String(sel.id) : null, mast: selMast, compare: compare.map(s => String(s.id)) });
 };
-(function heroSkyline(){   // the demo site's real horizon and the Sun's and Earth's paths, from its mission file
+(function heroSkyline(){   // the demo site's real horizon; the Sun and Earth move through the mission hour by hour
   const c = $("skyCanvas"), FILE = DATA_ROOT + "sites/210_10.0.json";
-  let D = null, t0 = 0;
+  let D = null, k = 0, last = 0, hold = 0, visible = true;
+  const HOURS_PER_S = 28;                                                        // the 14 days in about 12 s
   const x = (th, W) => (((th - 90 + 180) % 360 + 360) % 360) / 360 * W;        // Earth's side (theta 90) in the middle
-  function track(g, az, el, X, Y, upto){
+  function trail(g, az, el, X, Y, upto){
     g.beginPath(); let px = null;
-    for (let k = 0; k < upto; k++){ const xx = X(az[k]), yy = Y(el[k]);
+    for (let i = 0; i <= upto; i++){ const xx = X(az[i]), yy = Y(el[i]);
       if (px === null || Math.abs(xx - px) > c.clientWidth / 2) g.moveTo(xx, yy); else g.lineTo(xx, yy); px = xx; }
     g.stroke();
   }
-  function draw(f){
+  function draw(i){
     if (!D) return;
     const dpr = Math.min(devicePixelRatio || 1, 2), W = c.clientWidth, Hh = c.clientHeight;
-    c.width = W * dpr; c.height = Hh * dpr; const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(Hh * dpr)){ c.width = Math.round(W * dpr); c.height = Math.round(Hh * dpr); }
+    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const th = D.skyline.theta_deg, hz = D.skyline.horizon_deg, h = D.hourly;
-    const all = hz.concat(h.sun_el, [h.earth_el[0]]), lo = Math.min(...all) - 0.25, hi = Math.max(...all) + 0.6;
-    const X = a => x(a, W), Y = e => Hh - 18 - (e - lo) / (hi - lo) * (Hh - 30);
+    // the scale fits the horizon and the Sun; Earth swings higher, so above the frame it rides the top edge, labelled
+    const lo = Math.min(...hz, ...h.sun_el) - 0.25, hi = Math.max(...hz, ...h.sun_el) + 0.9, top = 14;
+    const X = a => x(a, W), Y = e => Hh - 18 - (e - lo) / (hi - lo) * (Hh - 18 - top);
     g.clearRect(0, 0, W, Hh);
-    const order = th.map((a, i) => [X(a), Y(hz[i])]).sort((a, b) => a[0] - b[0]);
+    const order = th.map((a, j) => [X(a), Y(hz[j])]).sort((a, b) => a[0] - b[0]);
     g.beginPath(); g.moveTo(0, Hh); order.forEach(([xx, yy]) => g.lineTo(xx, yy)); g.lineTo(W, Hh); g.closePath();
     const grd = g.createLinearGradient(0, 0, 0, Hh); grd.addColorStop(0, css("--rock")); grd.addColorStop(1, css("--bg"));
     g.fillStyle = grd; g.fill();
-    g.strokeStyle = css("--rock-line"); g.lineWidth = 1; g.beginPath(); order.forEach(([xx, yy], i) => i ? g.lineTo(xx, yy) : g.moveTo(xx, yy)); g.stroke();
-    const n = Math.max(2, Math.round(h.sun_az.length * f));
-    g.lineWidth = 1.5; g.strokeStyle = css("--sun"); track(g, h.sun_az, h.sun_el, X, Y, n);
-    const disc = (az, el, col, r) => { g.fillStyle = col; g.beginPath(); g.arc(X(az), Y(el), r, 0, 7); g.fill(); };
-    disc(h.earth_az[0], h.earth_el[0], css("--earth"), 6); disc(h.sun_az[0], h.sun_el[0], css("--sun"), 5);
-    g.fillStyle = css("--muted"); g.font = "12px Archivo, system-ui, sans-serif"; g.textAlign = "center";
-    g.fillText("toward Earth", W / 2, Hh - 3); g.textAlign = "left"; g.fillText("away from Earth", 2, Hh - 3);
+    g.strokeStyle = css("--rock-line"); g.lineWidth = 1; g.beginPath(); order.forEach(([xx, yy], j) => j ? g.lineTo(xx, yy) : g.moveTo(xx, yy)); g.stroke();
+    g.lineWidth = 1.5; g.strokeStyle = css("--sun"); g.globalAlpha = 0.7; trail(g, h.sun_az, h.sun_el, X, Y, i); g.globalAlpha = 1;
+    const disc = (xx, yy, col, r) => { g.fillStyle = col; g.beginPath(); g.arc(xx, yy, r, 0, 7); g.fill(); };
+    const ey = Y(h.earth_el[i]), ex = X(h.earth_az[i]), clipped = ey < top;
+    disc(ex, Math.max(ey, top), css("--earth"), 6);
+    g.font = "12px Archivo, system-ui, sans-serif"; g.fillStyle = css("--earth"); g.textAlign = "left";
+    if (clipped) g.fillText(`Earth ${fmt(h.earth_el[i], 1)}° up`, ex + 10, top + 4);
+    disc(X(h.sun_az[i]), Y(h.sun_el[i]), css("--sun"), 5);
+    g.fillStyle = css("--muted"); g.textAlign = "left";
+    g.fillText(`Day ${Math.floor(i / 24) + 1} of ${Math.round(h.sun_az.length / 24)} · ${hourTxt(h.time_utc[i])}`, 2, 12);
+    g.textAlign = "center"; g.fillText("toward Earth", W / 2, Hh - 3); g.textAlign = "left"; g.fillText("away from Earth", 2, Hh - 3);
     g.textAlign = "right"; g.fillText("away from Earth", W - 2, Hh - 3);
   }
-  function grow(ts){ if (!t0) t0 = ts; const f = Math.min(1, (ts - t0) / 2600); draw(f); if (f < 1) requestAnimationFrame(grow); }
+  function frame(ts){
+    const n = D.hourly.sun_az.length;
+    if (visible && !document.hidden){
+      const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
+      if (hold > 0) hold -= dt;
+      else { k += dt * HOURS_PER_S; if (k >= n - 1){ k = n - 1; hold = 1.5; } }
+      if (hold <= 0 && k >= n - 1) k = 0;
+      draw(Math.floor(k));
+    }
+    last = ts; requestAnimationFrame(frame);
+  }
   getJSON(FILE).then(d => {
     D = d; const h = d.hourly;
-    $("skyCap").textContent = `The real horizon around our demo site on the Shackleton rim (site ${d.site.id}, panels ${d.mast_m} m up), from NASA LOLA terrain, ` +
-      `with the Sun's path (amber) over the ${Math.round(d.mission.hours / 24)} days after landing at ${hourTxt(d.mission.start_utc)} and Earth (blue) at landing. ` +
+    $("skyCap").textContent = `The real horizon around our demo site on the Shackleton rim (site ${d.site.id}, panels ${d.mast_m} m up), from NASA LOLA terrain. ` +
+      `The Sun (amber) circles just above it and Earth (blue) bobs up and down, hour by hour over the ${Math.round(d.mission.hours / 24)} days after landing at ${hourTxt(d.mission.start_utc)}. ` +
       `Heights are stretched: the Sun never climbs more than ${fmt(Math.max(...h.sun_el), 1)}° above level here, and the skyline decides everything.`;
-    if (calm()) draw(1); else requestAnimationFrame(grow);
-    addEventListener("resize", () => draw(1));
+    new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(c);
+    addEventListener("resize", () => draw(Math.floor(k)));
+    if (calm()) draw(h.sun_az.length - 1); else requestAnimationFrame(frame);
   }).catch(err => { $("skyCap").textContent = `Couldn't load ${FILE}: ${err.message}`; });
 })();
 Promise.all([getJSON(PROFILES_FILE), getJSON(NAMED), getJSON(REGION_FILE)]).then(([profiles, named, region]) => {
