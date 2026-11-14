@@ -13,7 +13,7 @@ NASA Space Apps permits AI tools but asks teams to say where and how they were u
 
 The web page's front end was designed by our BIT teammate. AI-assisted fixes were merged during review, Claude Code added the failsafe card overnight on Nov 14 and restyled the page on Nov 14 (type, colours, the real-skyline hero band).
 
-**The logo** (`web/assets/logo.svg`) was made by Claude at the team's request. It keeps its Content Credentials (C2PA) metadata, and the page credits it visibly ("Logo made with AI assistance (Claude)").
+**The logo** (`web/assets/logo.svg`) was made by Claude at the team's request. It keeps its Content Credentials (C2PA) metadata, which state that Claude made it, and this statement discloses it. (The team removed the visible credit line from the page on Nov 14.)
 
 **Not AI-generated:**
 - **The data:** every number comes from NASA data (LOLA terrain, SPICE ephemerides, Moon Trek, PGDA) run through our code.
