@@ -313,12 +313,17 @@ def miss_table(rows, nb, parent_x, parent_y, s_nb, e_nb, met_nb, m, k, hours, mi
     return out
 
 
-def risk_words(margin, ladder, miss, lon, slope_of):
+BASIS_WORDS = {"within 100 m": "within 100 m",
+               "exact point": "on the exact point (no date here is safe if the lander misses by 100 m)"}
+
+
+def risk_words(margin, ladder, miss, lon, slope_of, basis):
     """The risk block in plain English: how late a landing can be, and what a 100 m miss does. slope_of maps a
-    point id to its slope over 100 m, for the slope sentence."""
+    point id to its slope over 100 m, for the slope sentence; basis ("within 100 m" or "exact point") is the rule
+    the delays were counted on, the same one that chose the headline landing."""
     first_bad = next((row for row in ladder if not row["safe"]), None)
-    late = (f"Land up to {margin - 1} h late and it is still safe" if margin > 1
-            else "Only the headline hour itself is safe")
+    late = (f"Land up to {margin - 1} h late and it is still safe {BASIS_WORDS[basis]}" if margin > 1
+            else f"Only the headline hour itself is safe {BASIS_WORDS[basis]}")
     if first_bad is None:
         words = [f"{late}; even one lunation later (709 h) is safe."]
     else:
@@ -509,7 +514,9 @@ def main():
             # the risk block (failsafe spec, commit 1): only here, because only this script has the multi-year
             # safe arrays and the 17 points; analyze.py files carry no risk block (a documented scope)
             checked = a.neighbours and n_points[i] > 0
-            safe_line = safe_100m[i, m] if checked else met["safe"][i, m]
+            # delays are counted on the rule that chose the headline: within 100 m when a date is safe there
+            basis = "within 100 m" if use_100m[i, m] else "exact point"
+            safe_line = safe_100m[i, m] if use_100m[i, m] else met["safe"][i, m]
             margin = consecutive_safe(safe_line, k)
             ladder = delay_ladder(safe_line, k, starts)
             miss = slope_of = None
@@ -518,8 +525,9 @@ def main():
                 miss = miss_table(rows_p, nb, float(sites["x"][i]), float(sites["y"][i]),
                                   nb_detail["s"], nb_detail["e"], nb_detail["met"], m, k, hours, a.min_dte_share)
                 slope_of = {str(nb["id"][p]): float(nb["slope"][p]) for p in rows_p}
-            report["risk"] = {"delay_margin_h": int(margin), "delay_ladder": ladder, "miss_table": miss,
-                              "words": risk_words(margin, ladder, miss, float(lon[i]), slope_of)}
+            report["risk"] = {"basis": basis, "delay_margin_h": int(margin), "delay_ladder": ladder,
+                              "miss_table": miss, "words": risk_words(margin, ladder, miss, float(lon[i]), slope_of,
+                                                                      basis)}
             (out / f).write_text(json.dumps(report))
 
     print(f"{n_sites} sites x {len(masts)} masts x {len(starts)} landing hours ({a.days}-day missions) -> {out}")

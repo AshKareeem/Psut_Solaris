@@ -91,8 +91,10 @@ risk card only when the key is present.
 
 ```
 risk                        ranked sites' mission files only
-  delay_margin_h            consecutive safe landing hours starting at the headline hour (the site's operative safe
-                            series: safe within 100 m when that check ran for it, else safe on the point);
+  basis                     "within 100 m" or "exact point": the rule the delays below are counted on, the same one
+                            that chose the headline landing (headline_within_100m); "exact point" when no date here
+                            is safe within 100 m (every 2 m site under council R3, option A)
+  delay_margin_h            consecutive safe landing hours starting at the headline hour, on that basis;
                             1 = only the headline hour itself
   delay_ladder [{slip_h, start_utc, safe, next_safe_utc}, ...]
                             slips of 1, 6 and 24 h and 709 h (that row carries label "one lunation (29.53 days)",

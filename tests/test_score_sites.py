@@ -247,7 +247,10 @@ def test_miss_table_agrees_with_safe_100m_and_a_steep_point_fails_on_slope_first
     assert rows[1]["fails"] == "slope"
     words = risk_words(4, delay_ladder(parent_safe[0, 0], 0, np.array(
         [str(np.datetime64("2026-01-01T00") + np.timedelta64(h, "h")) for h in range(25)])), rows, 0.0,
-        {"s_0": 3.0, "s_1": 12.0})
-    assert words[0].startswith("Land up to 3 h late and it is still safe")
+        {"s_0": 3.0, "s_1": 12.0}, "within 100 m")
+    assert words[0].startswith("Land up to 3 h late and it is still safe within 100 m")
+    # a site with no date safe within 100 m counts its delays on the exact point, and says so
+    on_point = risk_words(1, [], None, 0.0, None, "exact point")
+    assert on_point[0].startswith("Only the headline hour itself is safe on the exact point (no date here is safe")
     assert words[1] == ("Missed by up to 100 m: 1 of 2 points safe; the point 100 m toward bearing 90 deg "
                         "fails on slope (12.0 deg).")
