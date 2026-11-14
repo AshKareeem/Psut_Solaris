@@ -63,9 +63,6 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
 ## Still human-only
 
 - **Names:** the six names on slide 1, the submission page and the README; check all six are registered (not waitlisted).
-- **GitHub Pages:**
-  - Settings → Pages → Deploy from branch → `main` / root;
-  - the page is at `https://ashkareeem.github.io/Psut_Solaris/web/`;
-  - check it in a private window.
+- **GitHub Pages: done.** Live at https://ashkareeem.github.io/Psut_Solaris/
 - **The deck (Business):** from the outline in `docs/submission-drafts.md` §7, numbers as given there.
 - **Submit:** "Submit for Judging" after the pitch; resubmitting is allowed until Sun 23:59.

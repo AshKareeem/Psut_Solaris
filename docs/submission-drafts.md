@@ -18,7 +18,7 @@ The one link: the 7-slide deck (Business). The outline is in section 7.
 
 ## 4. Final Project link
 
-https://github.com/AshKareeem/Psut_Solaris. Once GitHub Pages is on, add the page link too (section 9, step 3).
+The live app: **https://ashkareeem.github.io/Psut_Solaris/** (GitHub Pages, on since Nov 14; opens the demo at `web/#site=210&mast=10`). Code: https://github.com/AshKareeem/Psut_Solaris
 
 ## 5. Project Details
 
@@ -104,8 +104,5 @@ It has been run on all 2,436 candidate sites within 6° of the pole (116 have a 
    - put all six on slide 1 and on the submission page;
    - add them to the README under "Team" (`[NAMES]`);
    - check that all six are registered for Amman & Aqaba and none is waitlisted.
-3. **GitHub Pages:**
-   - repo **Settings → Pages → Deploy from a branch → `main` / root**. The page then lives at `https://ashkareeem.github.io/Psut_Solaris/web/`.
-   - Open it in a private window to check.
-   - Without the local server, "Plan your own mission" is labelled as local-only; everything else works.
+3. **GitHub Pages: done** (Nov 14). Live at https://ashkareeem.github.io/Psut_Solaris/; "Plan your own mission" still needs the local server and says so on the page.
 4. **Click "Submit for Judging"** after the pitch; it can be resubmitted until Sun 23:59.
