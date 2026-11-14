@@ -36,3 +36,26 @@ def test_a_missing_field_is_named():
 def test_a_malformed_landing_hour_is_refused():
     with pytest.raises(ValueError):
         parse_mission({**GOOD, "start_utc": "next tuesday"})
+
+
+def test_the_published_site_may_call_the_mission_api_and_no_other_origin(tmp_path):
+    """GitHub Pages calls /api/mission through the tunnel (scripts/start_public.py); only that origin is allowed."""
+    import http.client
+    import threading
+    from functools import partial
+    from http.server import ThreadingHTTPServer
+    from scripts.serve import PAGES_ORIGIN, Handler
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), partial(Handler, directory=str(tmp_path)))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        def ask(method, origin, body=None):
+            c = http.client.HTTPConnection("127.0.0.1", srv.server_address[1])
+            c.request(method, "/api/mission", body=body, headers={"Origin": origin, "Content-Type": "application/json"})
+            r = c.getresponse(); r.read(); return r
+        pre = ask("OPTIONS", PAGES_ORIGIN)
+        assert pre.status == 204 and pre.getheader("Access-Control-Allow-Origin") == PAGES_ORIGIN
+        bad = ask("POST", PAGES_ORIGIN, body=b"{}")                  # missing fields: a 400 the page can read
+        assert bad.status == 400 and bad.getheader("Access-Control-Allow-Origin") == PAGES_ORIGIN
+        assert ask("OPTIONS", "https://example.com").getheader("Access-Control-Allow-Origin") is None
+    finally:
+        srv.shutdown()

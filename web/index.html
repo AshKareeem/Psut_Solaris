@@ -1144,7 +1144,8 @@ $("mForm").onsubmit = async e => {
   body.start_utc = `${$("mDate").value}T${String(+$("mHour").value).padStart(2, "0")}`;
   run.disabled = true; st.className = "st"; st.textContent = "Running the pipeline…"; const t0 = performance.now();
   try {
-    const r = await fetch("api/mission", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const api = location.hostname.endsWith("github.io") ? (await getJSON("api.json")).mission_api : "api/mission";
+    const r = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const out = (r.headers.get("Content-Type") || "").includes("json") ? await r.json() : null;
     if (!out) throw new Error(`${NO_SERVER} (HTTP ${r.status})`);
     if (!r.ok) throw new Error(out.error + (/does not reach/.test(out.error) ? ". For sites north of about 81.5° S pick “240 m map only”" : ""));

@@ -35,6 +35,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.analyze import analyze  # noqa: E402
 from scripts.battery import Battery  # noqa: E402
 
+PAGES_ORIGIN = "https://ashkareeem.github.io"   # the published site may call /api/mission through the tunnel
 FIELDS = ("lat", "lon", "terrain", "mast_m", "start_utc", "days", "e_max_Wh", "e_min_Wh", "p_panel_W", "p_load_W",
           "earth_margin_deg")
 
@@ -77,6 +78,21 @@ class Handler(SimpleHTTPRequestHandler):
     lock = threading.Lock()
     maps = None                                                    # (coarse, fine, kernels), set in main
 
+    def _cors(self):
+        if self.headers.get("Origin") == PAGES_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", PAGES_ORIGIN)
+            self.send_header("Vary", "Origin")
+
+    def do_OPTIONS(self):                                          # the browser's preflight for the JSON POST
+        if self.path != "/api/mission":
+            return self.send_error(404)
+        self.send_response(204)
+        self._cors()
+        self.send_header("Access-Control-Allow-Methods", "POST")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.end_headers()
+
     def do_POST(self):
         if self.path != "/api/mission":
             return self.send_error(404)
@@ -93,6 +109,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        self._cors()
         self.end_headers()
         self.wfile.write(data)
 
