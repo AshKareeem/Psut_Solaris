@@ -41,8 +41,10 @@ def julian_date(utc):
     return (np.datetime64(utc) - np.datetime64("1970-01-01T00")) / np.timedelta64(1, "h") / 24 + 2440587.5
 
 
-def horizons_url(body, lat, lon, times):
-    q = {"format": "json", "COMMAND": f"'{BODIES[body]}'", "EPHEM_TYPE": "'OBSERVER'", "CENTER": "'coord@301'",
+def horizons_url(body, lat, lon, times, fmt="json"):
+    """The Horizons API query for body seen from (lat, lon) on the Moon at times ('YYYY-MM-DDTHH', UTC); fmt "text"
+    gives the table a person reads in a browser (scripts/site_report.py links it from every mission file)."""
+    q = {"format": fmt, "COMMAND": f"'{BODIES[body]}'", "EPHEM_TYPE": "'OBSERVER'", "CENTER": "'coord@301'",
          "COORD_TYPE": "'GEODETIC'", "SITE_COORD": f"'{lon % 360:.6f},{lat:.6f},0'",
          "TLIST": " ".join(f"'{julian_date(t):.8f}'" for t in times), "TLIST_TYPE": "'JD'", "TIME_TYPE": "'UT'",
          "QUANTITIES": "'4'", "ANG_FORMAT": "'DEG'", "APPARENT": "'AIRLESS'", "CSV_FORMAT": "'YES'"}

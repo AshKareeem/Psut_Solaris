@@ -328,7 +328,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
       <div class="stat"><div class="v num">0.92</div><div class="k">Match with NASA's own sunlight map (correlation, 100 map pixels)</div></div>
       <div class="stat"><div class="v num">0.0003°</div><div class="k">Sun and Earth positions vs NASA JPL Horizons (124 checks)</div></div>
       <div class="stat"><div class="v num">1,440</div><div class="k">Directions in every site's skyline, out to 250 km</div></div>
-      <div class="stat"><div class="v num">151</div><div class="k">Automated tests passing</div></div>
+      <div class="stat"><div class="v num">152</div><div class="k">Automated tests passing</div></div>
     </div>
 
   </div>
@@ -526,8 +526,9 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
         <div class="card"><div class="big num">0.92</div><h3>Matches NASA's sunlight map</h3><p>Our skylines reproduce NASA's long-term sunlight map pixel by pixel around Shackleton's rim (correlation 0.92 at a 2 m height, average difference +0.1 points, 94% of pixels within 10 points).</p></div>
         <div class="card"><div class="big num">0.0003°</div><h3>Sun and Earth positions</h3><p>From NASA's SPICE toolkit, in the same Moon frame as the terrain maps. Checked against NASA JPL Horizons at 124 positions (six named sites, 2026–2030 and the IM-1 and IM-2 landing hours) and against a second library (Skyfield).</p></div>
         <div class="card"><div class="big num">5 m</div><h3>Checked on NASA Moon Trek's finer terrain</h3><p>The Shackleton rim site (site 210, 10 m) gives the same verdict on Moon Trek's 5 m LOLA map, four times finer than ours. Near the pole (site 33) the two maps disagree, and the 5 m map shows a rise 20 m away that our 20 m map smooths out: terrain finer than the map can change the answer. We also found and removed a 210 m spike in that map that would have faked a 4-hour shadow.</p></div>
+        <div class="card"><h3>Site 210 from orbit</h3><img src="assets/nac_site210.png" alt="LROC Narrow Angle Camera image of the Shackleton rim demo site, about 1.2 km across, with the 100 m landing ring drawn in" style="width:100%;border-radius:8px;display:block" loading="lazy"><p class="hint" style="margin-top:6px">The demo site seen by NASA's Lunar Reconnaissance Orbiter (Narrow Angle Camera mosaic, via NASA Moon Trek), about 1.2 km across; the ring is the 100 m landing-error circle we check. In this picture the ground inside the ring is in shadow, and that agrees with our result: at ground level this spot has no safe landing day in 2026–2030. Panels and antenna 10 m up clear the nearby rim. (The mosaic joins images taken at different times, so the shadows show one moment, and the straight edge on the left is a seam.) Image: NASA/GSFC/Arizona State University.</p></div>
         <div class="card"><div class="big num">50/50</div><h3>Terrain and sky line up</h3><p>A fake Sun placed just behind a test hill comes out hidden, and just above it comes out visible, in all 50 joint tests.</p></div>
-        <div class="card"><div class="big num">151</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
+        <div class="card"><div class="big num">152</div><h3>Automated tests</h3><p>Every part of the pipeline is tested on terrain with known answers before it touches real data.</p></div>
       </div>
       <p class="limits"><strong>Honest limits.</strong> Battery values follow public information about Intuitive Machines' Nova-C lander, with an estimated load, and assume panels that track the Sun, so survival is an upper bound for fixed panels. NASA doesn't publish the observer height of its map, so the 2 m match is a best fit. Every number on this page comes from the team's pipeline; the page computes nothing itself.</p>
     </div>
@@ -539,7 +540,7 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
     <div class="row"><strong style="color:var(--ink)">LunarWindow</strong> · Team Psut_Solaris · NASA Space Apps Challenge 2026</div>
     <div>Data: NASA LRO LOLA polar elevation maps (PDS Geosciences Node) · NASA GSFC PGDA lunar illumination maps (sunlight and Earth visibility) · NASA NAIF SPICE kernels (DE421, Moon orientation) · NASA JPL Horizons (Sun and Earth check) · NASA Moon Trek (5 m LOLA terrain, LROC NAC images) · LROC QuickMap (site views) · NASA SVS CGI Moon Kit (globe) · Battery values from public Nova-C information.</div>
     <div>An independent student project, not affiliated with or endorsed by NASA.</div>
-    <div>Use of AI: code written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 151 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Every data file says so in its metadata. <a href="https://github.com/AshKareeem/Psut_Solaris/blob/main/AI_USE.md">AI_USE.md</a></div>
+    <div>Use of AI: code written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 152 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Every data file says so in its metadata. <a href="https://github.com/AshKareeem/Psut_Solaris/blob/main/AI_USE.md">AI_USE.md</a></div>
     <div class="row"><label class="toggle" style="margin:0"><input type="checkbox" id="motionToggle"> Reduce motion</label></div>
   </div>
 </footer>
@@ -872,7 +873,11 @@ function renderFailsafe(d){   // the failsafe blocks of the mission file, shown 
   const wb = d.weak_battery;
   items.push(fsItem("If the battery is half as big", `<p>${esc(w[2] || "")}</p><p class="hint" style="margin:0">${esc(wb.label)} (${Math.round(wb.e_max_Wh)} Wh, reserve ${Math.round(wb.e_min_Wh)} Wh)</p>`));
   const c = d.confidence, mins = v => v == null ? "doesn't happen in this mission" : `moves by up to ${fmt(v, 0)} min`;
-  items.push(fsItem("How sure are we", `<p>If our skyline is off by ${c.skyline_shift_deg}° (the bound from our convergence study): sunset ${mins(c.sunset_shift_min)}, Earthset ${mins(c.earthset_shift_min)}; the verdict ${c.verdict_changes ? "<span class='fs-bad'>changes</span>" : "<span class='fs-ok'>stays the same</span>"}.</p>` + li(c.checks) + `<p style="margin-top:8px"><b>What this tool can't see:</b></p>` + li(c.cannot_see)));
+  const nc = d.nasa_check, chk = nc ? `<p style="margin-top:8px"><b>Check it yourself in NASA JPL Horizons</b> (landing ${hourTxt(nc.landing_utc)}): ` +
+    `<a href="${nc.horizons_sun_url}" target="_blank" rel="noopener">Sun ↗</a> (our elevation ${fmt(nc.our_sun_el_deg, 3)}°) · ` +
+    `<a href="${nc.horizons_earth_url}" target="_blank" rel="noopener">Earth ↗</a> (ours ${fmt(nc.our_earth_el_deg, 3)}°). ` +
+    `Horizons lists azimuth and elevation; compare the elevation. Elevation is from level, and at the rim the skyline itself can sit below level.</p>` : "";
+  items.push(fsItem("How sure are we", chk + `<p>If our skyline is off by ${c.skyline_shift_deg}° (the bound from our convergence study): sunset ${mins(c.sunset_shift_min)}, Earthset ${mins(c.earthset_shift_min)}; the verdict ${c.verdict_changes ? "<span class='fs-bad'>changes</span>" : "<span class='fs-ok'>stays the same</span>"}.</p>` + li(c.checks) + `<p style="margin-top:8px"><b>What this tool can't see:</b></p>` + li(c.cannot_see)));
   el.innerHTML = items.join("");
 }
 function countdown(wins, t){   // wins: sorted {start, end}; null = before/after the mission

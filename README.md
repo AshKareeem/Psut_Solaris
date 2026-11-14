@@ -1,6 +1,6 @@
 # LunarWindow: Lunar Landing Site Navigator (NASA Space Apps 2026, team Psut_Solaris)
 
-**Use of AI:** the code was written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 151 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Where, how and how it was checked: [AI_USE.md](AI_USE.md).
+**Use of AI:** the code was written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 152 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Where, how and how it was checked: [AI_USE.md](AI_USE.md).
 
 Challenge: [Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) (it was called "CLPS Lunar Mission Browser" until the full statement came out; the old link is dead).
 
@@ -169,10 +169,10 @@ d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2  AVGVISIB_85S_0
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 151 passed
+python -m pytest -q                # expect: 152 passed
 ```
 
-Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (145 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
+Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (146 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
 
 ## Part 1: synthetic demo (no download needed)
 
@@ -323,7 +323,7 @@ Horizons settings:
 
 The same hours go through `make_sky()`, the code the pipeline uses. It fails if any difference exceeds 0.01°.
 
-Result (Nov 13, 2026): **124 positions, every one within 0.0003° of Horizons.**
+Result (Nov 13, 2026): **124 positions, every one within 0.0003° of Horizons.** Every mission file also carries `nasa_check`: links to Horizons' own table for that site and landing hour, which the page shows as "Check it yourself in NASA JPL Horizons". For the demo landing (site 210, 2026-01-21 07 UTC), Horizons gives the Sun at 1.131667° elevation; ours is 1.132°.
 - Elevation: worst 0.000013° (Sun) and 0.000035° (Earth).
 - Azimuth: worst 0.000036° for Earth. For the Sun the worst is 0.000274°, at Apollo 11 with the Sun 89.4° up; that close to the zenith, azimuth is nearly undefined (it is a 0.000003° shift on the sky). Everywhere else it is within about 0.00001°.
 

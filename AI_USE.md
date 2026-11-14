@@ -22,7 +22,7 @@ The web page's front end was designed by our BIT teammate. AI-assisted fixes wer
 
 AI-written code was accepted only when it passed checks people can rerun:
 
-- **151 automated tests** (`python -m pytest tests -q`). Synthetic terrains with known answers (smooth Moon, cone, ring crater), the fast engine against a plain reference engine (to 1e-6°), the direction convention, every Step 3–4 rule, the battery, events to the minute, and real-terrain regressions.
+- **152 automated tests** (`python -m pytest tests -q`). Synthetic terrains with known answers (smooth Moon, cone, ring crater), the fast engine against a plain reference engine (to 1e-6°), the direction convention, every Step 3–4 rule, the battery, events to the minute, and real-terrain regressions.
 - **Independent checks against NASA:**
   - Sun and Earth positions: 124 checked against JPL Horizons, all within 0.0003°.
   - Sunlight and Earth visibility against NASA's PGDA maps: correlation 0.92 at the Shackleton rim, at a best-fit 2 m height.

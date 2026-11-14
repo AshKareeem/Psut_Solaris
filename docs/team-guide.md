@@ -472,8 +472,8 @@ How much the answers depend on the two weakest inputs (demo grid, 14 days, any l
 
 | NASA resource | On the Resources tab? | What we use it for | Where |
 |---|---|---|---|
-| **JPL Horizons** | yes | independent check of every Sun and Earth position: 124 positions within 0.0003° | `scripts/validate_horizons.py` |
-| **NASA Moon Trek** | yes | 5 m LOLA terrain at the demo site (finest level); LROC NAC photo mosaic around it | `scripts/moontrek.py`, `analyze --near` |
+| **JPL Horizons** | yes | independent check of every Sun and Earth position: 124 positions within 0.0003°; **every mission on the page links Horizons' own table at that site and landing hour, so a judge can check us live** | `scripts/validate_horizons.py`, `nasa_check` in each mission file |
+| **NASA Moon Trek** | yes | 5 m LOLA terrain at the demo site (finest level); the LROC NAC photo of site 210 with its 100 m ring on the page ("Site 210 from orbit") | `scripts/moontrek.py`, `analyze --near`, `web/assets/nac_site210.png` |
 | **LROC Quickmap** | yes | "View in NASA Quickmap" on every site, centred on it, south polar projection | `quickmapUrl()` in `web/index.html` |
 | LOLA polar DEMs (PDS) | no | the terrain behind every skyline: 240 m and 20 m | `horizon/dem.py` |
 | NAIF SPICE (DE421) | no | Sun and Earth every hour | `scripts/make_sky.py` |
@@ -500,7 +500,7 @@ How much the answers depend on the two weakest inputs (demo grid, 14 days, any l
 | **Moon Trek 5 m** (Resources tab) | our 20 m map | the same verdict for the demo mission; heights agree to a median 1.2–2.2 m on landing slopes | a **210 m spike** 582 m from site 190 would have faked a 4-hour shadow; found and removed (0.12% of pixels, recorded) |
 | IM-1 replay | a real landing | terrain sunset 2 Mar 2024, 14:17 UTC; Odysseus died 29 Feb with the Sun ~5° up | 240 m only; supports "attitude, not terrain" as a **hypothesis** |
 | IM-2 replay | a real landing | its target was lit at touchdown (Sun 1.60° above the skyline) | **the tool did not predict IM-2's death**: it tipped into a ~20 m crater, about one pixel of the finest map |
-| Automated tests | | **151 pass** (`python -m pytest tests -q`) | real-data tests skip when `data/` is missing |
+| Automated tests | | **152 pass** (`python -m pytest tests -q`) | real-data tests skip when `data/` is missing |
 
 Two independent sources (Horizons and Skyfield) agree with our sky to well under 1/500 of the Sun's radius. **That leaves terrain as the only real source of error.** The convergence study, the PGDA maps and Moon Trek's 5 m terrain check it.
 

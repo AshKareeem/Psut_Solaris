@@ -133,6 +133,10 @@ confidence
                             in the mission
   verdict_changes           true when either shift flips summary.safe_landing
   checks, cannot_see        static sentences, show as is
+nasa_check                  "check it yourself": links to NASA JPL Horizons' own table at this site and landing hour
+  landing_utc, our_sun_el_deg, our_earth_el_deg   our Sun and Earth elevation at touchdown
+  horizons_sun_url, horizons_earth_url             Horizons API, text table (the query validate_horizons.py uses)
+  how                       one sentence: compare Horizons' elevation with ours
 ```
 
 Drawing the skyline view: plot `horizon_deg` against `theta_deg`, then the Sun track (`sun_az`, `sun_el`) and Earth track (`earth_az`, `earth_el`) on the same axes. `sun_clearance_deg` is how high the Sun stands above the skyline ("solar elevation", objective 4); `hours_to_sunset` answers "how much time remains before sunset or Earthset" (objective 3).

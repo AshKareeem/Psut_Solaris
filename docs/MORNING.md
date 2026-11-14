@@ -20,7 +20,7 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
   - Site 33 stays as the honest example: finer terrain can change the answer.
 - **Required AI-use statement:** `AI_USE.md`, plus a line in the README and in the page footer.
 - **Stale claims fixed:**
-  - the page's "140 tests" is now 151;
+  - the page's "140 tests" is now 152;
   - the Moon Trek trust card now names site 210 and site 33;
   - the README's test counts and the 13 MB standalone size.
 - **Reproducibility:**
@@ -34,7 +34,7 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
   - a 7-slide outline with each slide's number and its source;
   - the disclosure.
 - **Team guide** (`docs/team-guide.md`) updated: the new demo, the failsafe card, the Moon Trek finding, the judge questions.
-- **Tests:** 151 pass (145 + 6 skipped without `data/`).
+- **Tests:** 152 pass (146 + 6 skipped without `data/`).
 - **The whole region** (`docs/region-results.md`): all 2,436 candidate sites within 6° of the pole ran through the full pipeline.
   - **116 sites** have a safe landing day at 2 m; **at least 49** stay safe after a 100 m miss.
   - **The best, site 422** (87.05°S, 24.19°W), keeps 77 safe days at 2 m and 162 at 10 m, and its Earth view matches NASA PGDA (55.8% vs 54–55%).
@@ -43,7 +43,7 @@ Written by Claude overnight (Nov 14, 03:00–05:00), following LLM council round
 
 ## For BIT (frontend, this morning)
 
-1. `git pull` first. Overnight edits touched only 4 lines of `web/index.html`: two test counters (151), the Moon Trek trust card, and the AI line in the footer.
+1. `git pull` first. Overnight edits touched only 4 lines of `web/index.html`: two test counters (now 152), the Moon Trek trust card, and the AI line in the footer.
 2. **The demo path to build around:** Your lander → **10 m** → Best sites → **site 210** → Play the mission → the failsafe card.
 3. **Already built overnight (commit `749ea06`); polish it if you like, don't rebuild it:**
    - **the failsafe card** under the mission player: late landing, the 17-point ring, the Earth plan, dark spells, half battery, how sure we are;

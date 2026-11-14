@@ -38,6 +38,10 @@ def test_report_explains_a_dark_spell_with_the_blocking_terrain():
     assert rep["events"]["sunlit"][0]["start"] is None and len(rep["events"]["sunlit"]) == 2
     assert len(rep["hourly"]["sun_fraction"]) == 24 and len(rep["skyline"]["horizon_deg"]) == 360
     assert "AI assistance" in rep["provenance"]                # the rules: generation acknowledged in metadata
+    nc = rep["nasa_check"]                                     # anyone can check the sky at landing in JPL Horizons
+    assert nc["landing_utc"] == "2027-01-01T00" and nc["our_sun_el_deg"] == 1.0
+    assert "format=text" in nc["horizons_sun_url"] and "COMMAND=%2710%27" in nc["horizons_sun_url"]
+    assert "COMMAND=%27399%27" in nc["horizons_earth_url"] and "coord%40301" in nc["horizons_earth_url"]
 
 
 def test_a_good_site_says_why_and_a_close_touchdown_is_marginal():

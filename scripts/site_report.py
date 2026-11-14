@@ -10,6 +10,7 @@ import numpy as np
 
 from scripts.battery import Battery, levels, simulate
 from scripts.events import earth_clearance, intervals, site_events, skyline_at, sun_clearance, sun_fraction, to_utc
+from scripts.validate_horizons import horizons_url
 
 VERSION = 1
 # The submission rules: generated code and data must acknowledge generation in text and metadata.
@@ -193,6 +194,16 @@ def confidence_block(H, track, battery, earth_margin, delta=SKYLINE_SHIFT_DEG):
             "checks": list(CHECKS), "cannot_see": list(CANNOT_SEE)}
 
 
+def nasa_check_block(site, t0, sun_el, earth_el):
+    """Links to NASA JPL Horizons' own table of the Sun and Earth seen from this site at the landing hour (the query
+    scripts/validate_horizons.py uses for its 124 checks), beside our elevations, so anyone can verify them."""
+    return {"landing_utc": t0, "our_sun_el_deg": round(float(sun_el), 4), "our_earth_el_deg": round(float(earth_el), 4),
+            "horizons_sun_url": horizons_url("sun", site["lat"], site["lon"], [t0], fmt="text"),
+            "horizons_earth_url": horizons_url("earth", site["lat"], site["lon"], [t0], fmt="text"),
+            "how": "Open a link: NASA JPL Horizons lists azimuth and elevation in degrees at this site and hour; "
+                   "compare its elevation with ours (Horizons' azimuth is clockwise from north)."}
+
+
 def site_report(site, H, D, complete, track, mast, battery, earth_margin):
     """site: id, lat, lon, x_m, y_m; H, D, complete: [n_az] at this mast; track: the mission's hourly Sun and Earth
     (time_utc, sun_az, sun_el, earth_az, earth_el, sun_radius_deg, earth_radius_deg). Returns a JSON-ready dict."""
@@ -274,6 +285,7 @@ def site_report(site, H, D, complete, track, mast, battery, earth_margin):
         "weak_battery": (weak := weak_battery_block(s, battery)),
         "words": failsafe_words(cp, dark, weak, battery, utc, hours),
         "confidence": confidence_block(H, track, battery, earth_margin),
+        "nasa_check": nasa_check_block(site, utc(0), track["sun_el"][0], track["earth_el"][0]),
         "events": site_events(sun_c, earth_c, t0),
         "skyline": {"theta_deg": r(np.arange(H.size) * 360.0 / H.size), "horizon_deg": r(H, 3),
                     "blocker_km": r(D / 1e3), "complete": [bool(v) for v in complete]},
