@@ -491,7 +491,7 @@ Safe days for a battery 1×, 2× and 4× bigger, and how much an antenna mask co
 | **Moon Trek 5 m** (Resources tab) | our 20 m map | the same verdict for the demo mission; heights agree to a median 1.2–2.2 m on landing slopes | a **210 m spike** 582 m from site 190 would have faked a 4-hour shadow; found and removed (0.12% of pixels, recorded) |
 | IM-1 replay | a real landing | terrain sunset 2 Mar 2024, 14:17 UTC; Odysseus died 29 Feb with the Sun ~5° up | 240 m only; supports "attitude, not terrain" as a **hypothesis** |
 | IM-2 replay | a real landing | its target was lit at touchdown (Sun 1.60° above the skyline) | **the tool did not predict IM-2's death**: it tipped into a ~20 m crater, about one pixel of the finest map |
-| Automated tests | | **141 pass** (`python -m pytest tests -q`) | real-data tests skip when `data/` is missing |
+| Automated tests | | **151 pass** (`python -m pytest tests -q`) | real-data tests skip when `data/` is missing |
 
 Two independent sources (Horizons and Skyfield) agree with our sky to well under 1/500 of the Sun's radius. **That leaves terrain as the only real source of error.** The convergence study, the PGDA maps and Moon Trek's 5 m terrain check it.
 
@@ -541,6 +541,13 @@ All from the 400-site demo grid, Nova-C-class lander, 14 days, unless stated oth
 - **Weak antenna (Earth 2° up):** the same order with fewer days. Site 33 at 5 m drops from 180 to 135 safe days (35 within 100 m).
 
 **Rim vs crest (Part 3.4):** at 2 m, 0.3% Sun on the rim site vs 85.9% on the crest 103 m away.
+
+**The whole region (Nov 14, `docs/region-results.md`):** all 2,436 candidate sites within 6° of the pole (IoT's grid, 5 km apart) went through the same pipeline, tile by tile (`scripts/run_region.py`).
+- 2,385 pass the gates, and no ray left the map.
+- Sites with a safe landing day at 0 / 2 / 5 / 10 m: **74 / 116 / 147 / 168**. Still safe after a 100 m miss: at least **3 / 49 / 74 / 98**.
+- **Best: site 422** (87.047°S, 24.187°W): 77 safe days within 100 m at 2 m, 149 at 5 m, 162 at 10 m.
+- **NASA PGDA at site 422:** Earth 55.8% (ours, 2 m) vs 54–55% (NASA); Sun 48% vs 46.6% on its own pixel.
+- **So the 2 m finding is local:** at the Shackleton rim no 2 m site survives a 100 m miss, but elsewhere many do.
 
 ---
 
@@ -597,7 +604,7 @@ Risk review of Fri Nov 13, evening. The numbers are from the rebuilt data (`out/
 | R5 | **Leads can be narrow.** At 5 m, site 33's #1 rests on 46 days within 100 m against 0, out of 1,813, and it fails on Moon Trek's 5 m terrain. The demo site 210 at 10 m leads by 315 to 139 and passes on Moon Trek. We never tested how terrain height error (metres, Barker et al. 2021) moves it. | **SAY IT** | "The geometry is validated; terrain error is the main uncertainty, which is why we check 100 m and re-checked the demo on Moon Trek's 5 m terrain." Future work: perturb the terrain by its stated error and re-rank. |
 | R6 | **17 points, not the whole circle.** A bad pocket between them would be missed. | **SAY IT** | 8 directions at 50 m and 100 m; denser rings are a parameter of `make_neighbours.py` if time allows. |
 | R7 | **The slope depends on the map.** Site 190: 8.2° on the 20 m map, 6.8° on Moon Trek's 5 m map. A site near 10° can flip between maps. | **SAY IT** | The gate uses the finest map that covers the whole grid (20 m). The 5 m map covers only a window at the demo site. |
-| R8 | **"Best" means best in the demo grid**: 400 sites about 9 km across. | **SAY IT** | "Demo grid" on every slide. The full ~2,436-site grid is the next run (about 5 minutes estimated). |
+| R8 | **"Best" meant best in the demo grid**: 400 sites about 9 km across. | **FIXED (Nov 14)** | All 2,436 sites within 6° were run (`docs/region-results.md`). The page still shows the demo grid; the region is on slide 6. Sites more than 5° out are beyond the convergence study. |
 | R9 | **At 0 m no site is safe within 100 m**, so the 0 m list ranks by days on the exact point. | **SAY IT** | The page states each rank's deciding metric (`rank_reason`), so this is visible, not hidden. |
 
 ### 9.2 Physics risks

@@ -1,6 +1,6 @@
 # LunarWindow: Lunar Landing Site Navigator (NASA Space Apps 2026, team Psut_Solaris)
 
-**Use of AI:** the code was written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 149 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Where, how and how it was checked: [AI_USE.md](AI_USE.md).
+**Use of AI:** the code was written with AI assistance (Claude Code; Claude Fable 5.2 for the failsafe blocks) and verified by the team with 151 automated tests and checks against NASA JPL Horizons, PGDA and Moon Trek. Where, how and how it was checked: [AI_USE.md](AI_USE.md).
 
 Challenge: [Lunar Landing Site Navigator](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/) (it was called "CLPS Lunar Mission Browser" until the full statement came out; the old link is dead).
 
@@ -113,6 +113,7 @@ scripts/sensitivity.py  safe days vs battery size and antenna mask
 scripts/named_to_sites.py  named_sites.csv (IM-1, IM-2, Shackleton, ...) -> sites.csv with height and slope over 100 m
 scripts/profiles.py   lander presets (mission requirements, never weights) for "Your lander"
 scripts/run_profiles.py  Step 4 + landing-error check for every preset
+scripts/run_region.py  the whole candidate grid (2,436 sites within 6 deg), tile by tile, with a regional summary
 scripts/build_web.py  Moon textures and a copy of every preset's results for the web app
 scripts/serve.py      serves web/ and runs hand-set missions (POST /api/mission -> scripts/analyze.py)
 scripts/build_standalone.py  web/ as one double-click HTML file for an offline demo (BIT)
@@ -168,10 +169,10 @@ d71dc5adfff653e0e924e0a4cbf03795b996caa30b4ace3d5843a70a5ab2f3d2  AVGVISIB_85S_0
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q                # expect: 149 passed
+python -m pytest -q                # expect: 151 passed
 ```
 
-Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (143 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
+Without the LOLA maps and SPICE kernels in `data/`, the six real-data checks are skipped (145 passed, 6 skipped): two in `test_fast.py`, the regression tests in `test_real_terrain.py` (Shackleton floor walled in at 19.75–23.52°, rim site dark at 2 m, the crest 103 m away lit 80–92%), `analyze` end to end, and `make_sky` against recorded JPL Horizons answers.
 
 ## Part 1: synthetic demo (no download needed)
 
@@ -352,6 +353,18 @@ python scripts/moontrek.py --lat -89.79293 --lon -153.9246 --half-km 9 --photo o
   - **Site 33 (89.926°S, about 2.2 km from the pole): the maps disagree, and the verdict flips.** On the 5 m map a rise of 7–8 m only 20–25 m away (bearings 104° and 137°) hides the Sun and Earth at touchdown, at 5 m and even at 10 m. The 20 m map shows about 1 m there. Over a 2 km box around the site the 5 m map (averaged to 20 m) differs from the 20 m map by a median of 4.2 m (95th percentile 28 m), against 1.2–2.2 m at site 190.
   - Two LOLA products alone can't tell whether that rise is real or an artifact of the older 5 m product (Barker et al. 2021 describe the improved 5 m maps). Either way, it is the lesson IM-2 taught: **terrain finer than the map can change the answer, so the demo uses site 210, which passes on both.**
 - **Imagery.** `--photo` stitches Moon Trek's LROC Narrow Angle Camera south-pole mosaic around the site and circles the 100 m landing-error zone. The tile grid was checked against LOLA: Shackleton's shadowed interior is centred on LOLA's crater centre.
+
+## Part 10: the whole region within 6° of the pole
+
+```
+python scripts/run_region.py --sites Team_Work/IOT/sites.csv --coarse data/ldem_75s_240m.lbl --fine data/ldem_80s_20m.lbl --tiles 4 --out out/region
+```
+
+- **What it runs:** every site of IoT's grid (2,436 sites, 5 km apart, within 6°) through the same pipeline as the demo, tile by tile, so memory stays under ~1.5 GB. That includes the 100 m check with slopes.
+- **Time:** about 70 minutes on a laptop.
+- **Sites with a safe landing day at 0 / 2 / 5 / 10 m:** 74 / 116 / 147 / 168. At least 3 / 49 / 74 / 98 stay safe after a 100 m miss.
+- **The best site:** site 422 (87.05°S, 24.19°W): 77 safe days within 100 m at 2 m and 162 at 10 m. Its Earth view matches NASA PGDA (ours 55.8%, NASA 54–55%).
+- **Full tables:** `docs/region-results.md`.
 
 ## References
 
